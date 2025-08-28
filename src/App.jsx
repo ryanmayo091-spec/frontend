@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
+// src/App.jsx
+import { useEffect, useState } from "react";
+import { Home, Sword, Package, Trophy, LogOut } from "lucide-react";
 
-const API_URL = "https://mafia-game-kxct.onrender.com"; // replace with your backend URL
+const API_URL = "https://mafia-game-kxct.onrender.com";
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [crimes, setCrimes] = useState([]);
+  const [activeTab, setActiveTab] = useState("home");
 
   useEffect(() => {
     const saved = localStorage.getItem("user");
@@ -24,7 +27,7 @@ export default function App() {
     if (data.success) {
       setUser(data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
-    } else alert(data.error);
+    } else alert(data.error || "Login failed");
   }
 
   async function register(e) {
@@ -35,20 +38,9 @@ export default function App() {
       body: JSON.stringify({ username, password }),
     });
     const data = await res.json();
-    if (data.success) {
-      alert("Registered! Please log in.");
-    } else alert(data.error);
+    if (data.success) alert("Registered! Please log in.");
+    else alert(data.error || "Register failed");
   }
-
-  async function loadCrimes() {
-    const res = await fetch(`${API_URL}/crimes`);
-    const data = await res.json();
-    setCrimes(data);
-  }
-
-  useEffect(() => {
-    if (user) loadCrimes();
-  }, [user]);
 
   async function commitCrime(crimeId) {
     const res = await fetch(`${API_URL}/commit-crime`, {
@@ -57,10 +49,9 @@ export default function App() {
       body: JSON.stringify({ userId: user.id, crimeId }),
     });
     const data = await res.json();
-    if (data.success) {
-      alert(`✅ Success! You earned $${data.reward}`);
-    } else {
-      alert("❌ Failed crime");
+    if (data.success && data.user) {
+      setUser(data.user);
+      localStorage.setItem("user", JSON.stringify(data.user));
     }
   }
 
@@ -71,57 +62,120 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
-        <h1 className="text-2xl mb-4">Mafia Game</h1>
-        <form className="flex flex-col gap-2" onSubmit={login}>
-          <input
-            className="p-2 rounded text-black"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <input
-            className="p-2 rounded text-black"
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button className="bg-green-600 p-2 rounded">Login</button>
-        </form>
-        <button className="mt-2 text-sm" onClick={register}>
-          Or Register
-        </button>
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <div className="bg-gray-800 p-6 rounded-2xl shadow-lg w-80">
+          <h1 className="text-2xl font-bold mb-6 text-center">Mafia Game</h1>
+          <form onSubmit={login} className="flex flex-col gap-3">
+            <input
+              className="p-2 rounded text-black"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <input
+              className="p-2 rounded text-black"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button className="bg-green-600 hover:bg-green-700 p-2 rounded font-semibold">Login</button>
+          </form>
+          <button
+            onClick={register}
+            className="mt-4 text-sm underline block mx-auto hover:text-green-400"
+          >
+            Or Register
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-800 text-white p-4">
-      <div className="flex justify-between mb-4">
-        <h1 className="text-xl">Welcome, {user.username}</h1>
-        <button onClick={logout} className="bg-red-600 p-2 rounded">
-          Logout
-        </button>
-      </div>
-      <p>💰 Money: ${user.money}</p>
+    <div className="flex min-h-screen bg-gray-900 text-white">
+      {/* Sidebar */}
+      <aside className="w-64 bg-gray-800 p-6 flex flex-col shadow-lg">
+        <h2 className="text-2xl font-bold mb-8 text-green-400">Mafia Game</h2>
+        <nav className="flex flex-col gap-3">
+          <TabButton icon={<Home size={18} />} label="Home" active={activeTab === "home"} onClick={() => setActiveTab("home")} />
+          <TabButton icon={<Sword size={18} />} label="Crimes" active={activeTab === "crimes"} onClick={() => setActiveTab("crimes")} />
+          <TabButton icon={<Package size={18} />} label="Inventory" active={activeTab === "inventory"} onClick={() => setActiveTab("inventory")} />
+          <TabButton icon={<Trophy size={18} />} label="Rankings" active={activeTab === "rankings"} onClick={() => setActiveTab("rankings")} />
+        </nav>
+        <div className="mt-auto pt-6 border-t border-gray-700">
+          <div className="mb-2 text-sm opacity-80">{user.username}</div>
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 w-full bg-red-600 hover:bg-red-700 p-2 rounded justify-center"
+          >
+            <LogOut size={16} /> Logout
+          </button>
+        </div>
+      </aside>
 
-      <h2 className="mt-6 mb-2 text-lg">Crimes</h2>
-      <ul>
-        {crimes.map((c) => (
-          <li key={c.id} className="mb-2">
-            {c.name} - Reward: ${c.min_reward} to ${c.max_reward}
+      {/* Main content */}
+      <main className="flex-1 p-8">
+        {activeTab === "home" && (
+          <div>
+            <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+              <StatCard title="Money" value={`$${user.money ?? 0}`} />
+              <StatCard title="Total Crimes" value={user.total_crimes ?? 0} />
+              <StatCard title="Successful" value={user.successful_crimes ?? 0} />
+              <StatCard title="Unsuccessful" value={user.unsuccessful_crimes ?? 0} />
+            </div>
+          </div>
+        )}
+
+        {activeTab === "crimes" && (
+          <div>
+            <h1 className="text-3xl font-bold mb-6">Crimes</h1>
             <button
-              className="ml-2 bg-blue-600 p-1 rounded"
-              onClick={() => commitCrime(c.id)}
+              onClick={() => commitCrime(1)}
+              className="bg-blue-600 hover:bg-blue-700 p-3 rounded shadow"
             >
-              Commit
+              Commit Crime #1
             </button>
-          </li>
-        ))}
-      </ul>
+          </div>
+        )}
+
+        {activeTab === "inventory" && (
+          <div>
+            <h1 className="text-3xl font-bold mb-6">Inventory</h1>
+            <p className="opacity-80">Your items will appear here soon.</p>
+          </div>
+        )}
+
+        {activeTab === "rankings" && (
+          <div>
+            <h1 className="text-3xl font-bold mb-6">Rankings</h1>
+            <p className="opacity-80">Leaderboard coming soon.</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
 
+function TabButton({ icon, label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-3 py-2 rounded font-medium transition-colors ${
+        active ? "bg-gray-700 text-green-400" : "hover:bg-gray-700"
+      }`}
+    >
+      {icon} {label}
+    </button>
+  );
+}
 
+function StatCard({ title, value }) {
+  return (
+    <div className="bg-gray-800 rounded-xl p-4 shadow text-center">
+      <div className="text-sm opacity-70">{title}</div>
+      <div className="text-2xl font-bold text-green-400 mt-2">{value}</div>
+    </div>
+  );
+}
