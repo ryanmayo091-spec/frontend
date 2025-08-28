@@ -159,6 +159,41 @@ async function commitCrime(crimeId) {
      {activeTab === "crimes" && (
   <div>
     <h1 className="text-3xl font-bold mb-6">Crimes</h1>
+    <div className="space-y-4">
+      {crimes.map((crime) => {
+        const canCommit =
+          !user.last_crime ||
+          new Date(user.last_crime).getTime() + crime.cooldown_seconds * 1000 < Date.now();
+
+        return (
+          <div
+            key={crime.id}
+            className="bg-gray-800 p-4 rounded shadow flex justify-between items-center"
+          >
+            <div>
+              <h2 className="text-xl font-semibold">{crime.name}</h2>
+              <p className="text-sm opacity-80">
+                Reward: ${crime.min_reward} - ${crime.max_reward} | Success{" "}
+                {Math.round(crime.success_rate * 100)}%
+              </p>
+            </div>
+            {canCommit ? (
+              <button
+                onClick={() => commitCrime(crime.id)}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+              >
+                Commit
+              </button>
+            ) : (
+              <span className="text-red-500 text-sm">⏳ Cooling down</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
+
 
     {user.jail_until && new Date(user.jail_until) > new Date() ? (
       <div className="bg-red-600 p-4 rounded mb-4">
@@ -232,6 +267,7 @@ function StatCard({ title, value }) {
     </div>
   );
 }
+
 
 
 
