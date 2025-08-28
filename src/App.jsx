@@ -13,8 +13,10 @@ export default function App() {
   const [properties, setProperties] = useState([]);
   const [activeTab, setActiveTab] = useState("home");
   const [amount, setAmount] = useState("");
+  const [customPrices, setCustomPrices] = useState({}); // propertyId -> price
+  const [salePrices, setSalePrices] = useState({}); // propertyId -> price
 
-  // Force re-render every 1s (for live countdowns)
+  // Force re-render for timers
   useEffect(() => {
     const interval = setInterval(() => {
       setUser((u) => (u ? { ...u } : u));
@@ -77,15 +79,9 @@ export default function App() {
       body: JSON.stringify({ userId: user.id, crimeId }),
     });
     const data = await res.json();
-    if (data.success) {
-      setUser(data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      alert(`You earned $${data.reward}`);
-    } else {
-      setUser(data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      alert(data.message);
-    }
+    setUser(data.user);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    alert(data.message || (data.success ? `You earned $${data.reward}` : "Failed!"));
   }
 
   // --- Bank ---
@@ -120,7 +116,48 @@ export default function App() {
       body: JSON.stringify({ userId: user.id, propertyId }),
     });
     const data = await res.json();
-    alert("Property purchased!");
+    if (data.success) {
+      alert("Property purchased!");
+      refreshProperties();
+    } else {
+      alert(data.error || "Purchase failed");
+    }
+  }
+
+  async function sellProperty(propertyId) {
+    const res = await fetch(`${API_URL}/properties/sell`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, propertyId, salePrice: parseInt(salePrices[propertyId]) }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("Property listed for sale!");
+      refreshProperties();
+    } else {
+      alert(data.error || "Failed to sell property");
+    }
+  }
+
+  async function setPropertyPrice(propertyId) {
+    const res = await fetch(`${API_URL}/properties/set-price`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, propertyId, customPrice: parseInt(customPrices[propertyId]) }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("Property price updated!");
+      refreshProperties();
+    } else {
+      alert(data.error || "Failed to update price");
+    }
+  }
+
+  async function refreshProperties() {
+    const res = await fetch(`${API_URL}/properties`);
+    const data = await res.json();
+    setProperties(data);
   }
 
   // --- Login/Register screen ---
@@ -220,21 +257,42 @@ export default function App() {
           <div>
             <h1 className="text-3xl font-bold mb-6">Properties</h1>
             {properties.map((p) => (
-              <div key={p.id} className="bg-gray-800 p-4 rounded shadow flex justify-between items-center mb-2">
-                <div>{p.name} - ${p.price} (Income/hr: ${p.income_per_hour})</div>
-                <button onClick={() => buyProperty(p.id)} className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded">Buy</button>
+              <div key={p.id} className="bg-gray-800 p-4 rounded shadow mb-2">
+                <h2 className="font-bold">{p.name}</h2>
+                <p>Base Price: ${p.base_price}</p>
+                {p.owner_id ? (
+                  <p>Owned by: {p.owner_id === user.id ? "You" : `User ${p.owner_id}`}</p>
+                ) : (
+                  <p>Not owned</p>
+                )}
+                {p.is_for_sale && <p className="text-yellow-400">For Sale: ${p.sale_price}</p>}
+                
+                {/* If unowned or for sale → buy button */}
+                {(!p.owner_id || p.is_for_sale) && (
+                  <button onClick={() => buyProperty(p.id)} className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded mt-2">Buy</button>
+                )}
+
+                {/* If you own it → management panel */}
+                {p.owner_id === user.id && (
+                  <div className="mt-2 space-y-2">
+                    <div>
+                      <input type="number" placeholder="Set custom price" value={customPrices[p.id] || ""} onChange={(e) => setCustomPrices({ ...customPrices, [p.id]: e.target.value })} className="p-1 text-black rounded" />
+                      <button onClick={() => setPropertyPrice(p.id)} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded ml-2">Update Price</button>
+                    </div>
+                    <div>
+                      <input type="number" placeholder="Sale price" value={salePrices[p.id] || ""} onChange={(e) => setSalePrices({ ...salePrices, [p.id]: e.target.value })} className="p-1 text-black rounded" />
+                      <button onClick={() => sellProperty(p.id)} className="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded ml-2">Sell Property</button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {activeTab === "inventory" && (
-          <div><h1 className="text-3xl font-bold mb-6">Inventory</h1><p className="opacity-80">Your items will appear here soon.</p></div>
-        )}
+        {activeTab === "inventory" && <div><h1 className="text-3xl font-bold mb-6">Inventory</h1><p className="opacity-80">Your items will appear here soon.</p></div>}
 
-        {activeTab === "rankings" && (
-          <div><h1 className="text-3xl font-bold mb-6">Rankings</h1><p className="opacity-80">Leaderboard coming soon.</p></div>
-        )}
+        {activeTab === "rankings" && <div><h1 className="text-3xl font-bold mb-6">Rankings</h1><p className="opacity-80">Leaderboard coming soon.</p></div>}
       </main>
     </div>
   );
