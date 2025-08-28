@@ -11,21 +11,31 @@ export default function App() {
   const [crimes, setCrimes] = useState([]);
   const [activeTab, setActiveTab] = useState("home");
 
-useEffect(() => {
-  const saved = localStorage.getItem("user");
-  if (saved) setUser(JSON.parse(saved));
-}, []);
+  // Force re-render every 1s (for live countdowns)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setUser((u) => (u ? { ...u } : u));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Load saved user from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("user");
+    if (saved) setUser(JSON.parse(saved));
+  }, []);
 
   // Fetch crimes when logged in
-useEffect(() => {
-  if (user) {
-    fetch(`${API_URL}/crimes`)
-      .then((res) => res.json())
-      .then((data) => setCrimes(data));
-  }
-}, [user]);
+  useEffect(() => {
+    if (user) {
+      fetch(`${API_URL}/crimes`)
+        .then((res) => res.json())
+        .then((data) => setCrimes(data))
+        .catch((err) => console.error("Failed to load crimes", err));
+    }
+  }, [user]);
 
-
+  // Login
   async function login(e) {
     e.preventDefault();
     const res = await fetch(`${API_URL}/login`, {
@@ -40,6 +50,7 @@ useEffect(() => {
     } else alert(data.error || "Login failed");
   }
 
+  // Register
   async function register(e) {
     e.preventDefault();
     const res = await fetch(`${API_URL}/register`, {
@@ -52,42 +63,40 @@ useEffect(() => {
     else alert(data.error || "Register failed");
   }
 
-async function commitCrime(crimeId) {
-  const res = await fetch(`${API_URL}/commit-crime`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId: user.id, crimeId }),
-  });
-  const data = await res.json();
+  // Commit crime
+  async function commitCrime(crimeId) {
+    const res = await fetch(`${API_URL}/commit-crime`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, crimeId }),
+    });
+    const data = await res.json();
 
-  if (data.jail_until) {
-    // User failed a crime and is jailed
-    setUser({ ...user, jail_until: data.jail_until });
-    localStorage.setItem(
-      "user",
-      JSON.stringify({ ...user, jail_until: data.jail_until })
-    );
-    alert(data.message || "You are in jail!");
-  } else if (data.success) {
-    // Crime success
-    setUser({ ...user, money: data.newBalance });
-    localStorage.setItem(
-      "user",
-      JSON.stringify({ ...user, money: data.newBalance })
-    );
-    alert(`Success! You earned $${data.reward}`);
-  } else {
-    // Crime failed but not jailed
-    alert(data.message || "Crime failed!");
+    if (data.jail_until) {
+      setUser({ ...user, jail_until: data.jail_until, last_crime: new Date().toISOString() });
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...user, jail_until: data.jail_until, last_crime: new Date().toISOString() })
+      );
+      alert(data.message || "You are in jail!");
+    } else if (data.success) {
+      setUser({ ...user, money: data.newBalance, last_crime: new Date().toISOString() });
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...user, money: data.newBalance, last_crime: new Date().toISOString() })
+      );
+      alert(`Success! You earned $${data.reward}`);
+    } else {
+      alert(data.message || "Crime failed!");
+    }
   }
-}
-
 
   function logout() {
     setUser(null);
     localStorage.removeItem("user");
   }
 
+  // Login/Register screen
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -156,77 +165,54 @@ async function commitCrime(crimeId) {
           </div>
         )}
 
-     {activeTab === "crimes" && (
-  <div>
-    <h1 className="text-3xl font-bold mb-6">Crimes</h1>
-    <div className="space-y-4">
-      {crimes.map((crime) => {
-        const canCommit =
-          !user.last_crime ||
-          new Date(user.last_crime).getTime() + crime.cooldown_seconds * 1000 < Date.now();
+        {activeTab === "crimes" && (
+          <div>
+            <h1 className="text-3xl font-bold mb-6">Crimes</h1>
 
-        return (
-          <div
-            key={crime.id}
-            className="bg-gray-800 p-4 rounded shadow flex justify-between items-center"
-          >
-            <div>
-              <h2 className="text-xl font-semibold">{crime.name}</h2>
-              <p className="text-sm opacity-80">
-                Reward: ${crime.min_reward} - ${crime.max_reward} | Success{" "}
-                {Math.round(crime.success_rate * 100)}%
-              </p>
-            </div>
-            {canCommit ? (
-              <button
-                onClick={() => commitCrime(crime.id)}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-              >
-                Commit
-              </button>
+            {user.jail_until && new Date(user.jail_until) > new Date() ? (
+              <div className="bg-red-600 p-4 rounded mb-4">
+                🚔 You are in jail until{" "}
+                {new Date(user.jail_until).toLocaleTimeString()}.
+              </div>
             ) : (
-              <span className="text-red-500 text-sm">⏳ Cooling down</span>
+              <div className="space-y-4">
+                {crimes.map((crime) => {
+                  const lastCrime = user.last_crime ? new Date(user.last_crime) : null;
+                  const nextAvailable = lastCrime
+                    ? lastCrime.getTime() + crime.cooldown_seconds * 1000
+                    : 0;
+                  const now = Date.now();
+                  const remaining = Math.max(0, Math.ceil((nextAvailable - now) / 1000));
+
+                  return (
+                    <div
+                      key={crime.id}
+                      className="bg-gray-800 p-4 rounded shadow flex justify-between items-center"
+                    >
+                      <div>
+                        <h2 className="text-xl font-semibold">{crime.name}</h2>
+                        <p className="text-sm opacity-80">
+                          Reward: ${crime.min_reward}-{crime.max_reward} | Success{" "}
+                          {Math.round(crime.success_rate * 100)}%
+                        </p>
+                      </div>
+                      {remaining > 0 ? (
+                        <span className="text-red-500 text-sm">⏳ {remaining}s</span>
+                      ) : (
+                        <button
+                          onClick={() => commitCrime(crime.id)}
+                          className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+                        >
+                          Commit
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
-        );
-      })}
-    </div>
-  </div>
-)}
-
-
-    {user.jail_until && new Date(user.jail_until) > new Date() ? (
-      <div className="bg-red-600 p-4 rounded mb-4">
-        🚔 You are in jail until{" "}
-        {new Date(user.jail_until).toLocaleTimeString()}.
-      </div>
-    ) : (
-      <div className="grid gap-4">
-        {crimes.map((crime) => (
-          <div
-            key={crime.id}
-            className="bg-gray-800 p-4 rounded shadow flex justify-between items-center"
-          >
-            <div>
-              <h2 className="text-xl font-semibold">{crime.name}</h2>
-              <p className="text-sm opacity-80">
-                Reward: ${crime.min_reward} - ${crime.max_reward} | Success
-                Rate: {Math.round(crime.success_rate * 100)}%
-              </p>
-            </div>
-            <button
-              onClick={() => commitCrime(crime.id)}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-            >
-              Commit
-            </button>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-)}
-
+        )}
 
         {activeTab === "inventory" && (
           <div>
@@ -267,8 +253,3 @@ function StatCard({ title, value }) {
     </div>
   );
 }
-
-
-
-
-
