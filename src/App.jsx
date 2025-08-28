@@ -1,6 +1,6 @@
 // src/App.jsx
 import { useEffect, useState } from "react";
-import { Home, Sword, Package, Trophy, Banknote, Car, Building2, LogOut } from "lucide-react";
+import { Home, Sword, Package, Trophy, Banknote, Car, Building2, Users, LogOut } from "lucide-react";
 
 const API_URL = "https://mafia-game-kxct.onrender.com";
 
@@ -9,14 +9,17 @@ export default function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [crimes, setCrimes] = useState([]);
-  const [cars, setCars] = useState([]);
   const [properties, setProperties] = useState([]);
   const [activeTab, setActiveTab] = useState("home");
   const [amount, setAmount] = useState("");
-  const [customPrices, setCustomPrices] = useState({}); // propertyId -> price
-  const [salePrices, setSalePrices] = useState({}); // propertyId -> price
+  const [customPrices, setCustomPrices] = useState({});
+  const [salePrices, setSalePrices] = useState({});
+  const [gangName, setGangName] = useState("");
+  const [joinGangId, setJoinGangId] = useState("");
+  const [warTargetGang, setWarTargetGang] = useState("");
+  const [bulletsForWar, setBulletsForWar] = useState("");
 
-  // Force re-render for timers
+  // Refresh every second for timers
   useEffect(() => {
     const interval = setInterval(() => {
       setUser((u) => (u ? { ...u } : u));
@@ -24,22 +27,21 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load saved user
+  // Load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("user");
     if (saved) setUser(JSON.parse(saved));
   }, []);
 
-  // Fetch data
+  // Fetch crimes & properties
   useEffect(() => {
     if (user) {
-      fetch(`${API_URL}/crimes`).then((res) => res.json()).then(setCrimes);
-      fetch(`${API_URL}/cars`).then((res) => res.json()).then(setCars);
-      fetch(`${API_URL}/properties`).then((res) => res.json()).then(setProperties);
+      fetch(`${API_URL}/crimes`).then((r) => r.json()).then(setCrimes);
+      refreshProperties();
     }
   }, [user]);
 
-  // --- Auth ---
+  // Auth
   async function login(e) {
     e.preventDefault();
     const res = await fetch(`${API_URL}/login`, {
@@ -71,7 +73,7 @@ export default function App() {
     localStorage.removeItem("user");
   }
 
-  // --- Crimes ---
+  // Crimes
   async function commitCrime(crimeId) {
     const res = await fetch(`${API_URL}/commit-crime`, {
       method: "POST",
@@ -84,58 +86,25 @@ export default function App() {
     alert(data.message || (data.success ? `You earned $${data.reward}` : "Failed!"));
   }
 
-  // --- Bank ---
-  async function bankAction(type) {
-    const res = await fetch(`${API_URL}/bank/${type}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, amount: parseInt(amount) }),
-    });
+  // Properties
+  async function refreshProperties() {
+    const res = await fetch(`${API_URL}/properties`);
     const data = await res.json();
-    setUser(data);
-    localStorage.setItem("user", JSON.stringify(data));
-    setAmount("");
+    setProperties(data);
   }
 
-  // --- Garage ---
-  async function buyCar(carId) {
-    const res = await fetch(`${API_URL}/garage/buy`, {
+  async function buyBullets(propertyId, amount) {
+    const res = await fetch(`${API_URL}/factory/buy`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, carId }),
-    });
-    const data = await res.json();
-    alert("Car purchased!");
-  }
-
-  // --- Properties ---
-  async function buyProperty(propertyId) {
-    const res = await fetch(`${API_URL}/properties/buy`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, propertyId }),
+      body: JSON.stringify({ userId: user.id, propertyId, amount: parseInt(amount) }),
     });
     const data = await res.json();
     if (data.success) {
-      alert("Property purchased!");
+      alert(`Bought ${data.bulletsBought} bullets for $${data.cost}`);
       refreshProperties();
     } else {
-      alert(data.error || "Purchase failed");
-    }
-  }
-
-  async function sellProperty(propertyId) {
-    const res = await fetch(`${API_URL}/properties/sell`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, propertyId, salePrice: parseInt(salePrices[propertyId]) }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert("Property listed for sale!");
-      refreshProperties();
-    } else {
-      alert(data.error || "Failed to sell property");
+      alert(data.error || "Failed to buy bullets");
     }
   }
 
@@ -154,13 +123,54 @@ export default function App() {
     }
   }
 
-  async function refreshProperties() {
-    const res = await fetch(`${API_URL}/properties`);
+  // Attacks
+  async function attackPlayer(defenderId, bulletsUsed) {
+    const res = await fetch(`${API_URL}/attack`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attackerId: user.id, defenderId, bulletsUsed }),
+    });
     const data = await res.json();
-    setProperties(data);
+    alert(data.message);
   }
 
-  // --- Login/Register screen ---
+  // Gangs
+  async function createGang() {
+    const res = await fetch(`${API_URL}/gang/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bossId: user.id, name: gangName }),
+    });
+    const data = await res.json();
+    alert(data.success ? "Gang created!" : data.error);
+  }
+
+  async function joinGang() {
+    const res = await fetch(`${API_URL}/gang/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, gangId: parseInt(joinGangId) }),
+    });
+    const data = await res.json();
+    alert(data.success ? "Joined gang!" : data.error);
+  }
+
+  async function startWar() {
+    const res = await fetch(`${API_URL}/gang/war`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        gangA: user.gang_id,
+        gangB: parseInt(warTargetGang),
+        bulletsUsed: parseInt(bulletsForWar),
+        initiatorId: user.id,
+      }),
+    });
+    const data = await res.json();
+    alert(data.message);
+  }
+
+  // --- UI ---
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -177,7 +187,6 @@ export default function App() {
     );
   }
 
-  // --- Logged in UI ---
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
       {/* Sidebar */}
@@ -186,15 +195,13 @@ export default function App() {
         <nav className="flex flex-col gap-2">
           <TabButton icon={<Home size={18} />} label="Home" active={activeTab === "home"} onClick={() => setActiveTab("home")} />
           <TabButton icon={<Sword size={18} />} label="Crimes" active={activeTab === "crimes"} onClick={() => setActiveTab("crimes")} />
-          <TabButton icon={<Banknote size={18} />} label="Bank" active={activeTab === "bank"} onClick={() => setActiveTab("bank")} />
-          <TabButton icon={<Car size={18} />} label="Garage" active={activeTab === "garage"} onClick={() => setActiveTab("garage")} />
           <TabButton icon={<Building2 size={18} />} label="Properties" active={activeTab === "properties"} onClick={() => setActiveTab("properties")} />
-          <TabButton icon={<Package size={18} />} label="Inventory" active={activeTab === "inventory"} onClick={() => setActiveTab("inventory")} />
+          <TabButton icon={<Users size={18} />} label="Gangs" active={activeTab === "gangs"} onClick={() => setActiveTab("gangs")} />
           <TabButton icon={<Trophy size={18} />} label="Rankings" active={activeTab === "rankings"} onClick={() => setActiveTab("rankings")} />
         </nav>
         <div className="mt-auto pt-6 border-t border-gray-700 space-y-2 text-center">
           <div className="text-lg font-semibold text-green-400">{user.username}</div>
-          <div className="text-sm text-gray-300">💰 ${user.money ?? 0} | 🏦 ${user.bank_balance ?? 0}</div>
+          <div className="text-sm text-gray-300">💰 ${user.money ?? 0} | 🏦 ${user.bank_balance ?? 0} | 🔫 {user.bullets ?? 0}</div>
           <button onClick={logout} className="mt-4 flex items-center gap-2 w-full bg-red-600 hover:bg-red-700 py-2 px-3 rounded-xl font-bold justify-center shadow-md">
             <LogOut size={16} /> Logout
           </button>
@@ -206,48 +213,22 @@ export default function App() {
         {activeTab === "home" && (
           <div>
             <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
-              <StatCard title="Money" value={`$${user.money ?? 0}`} />
-              <StatCard title="Bank" value={`$${user.bank_balance ?? 0}`} />
-              <StatCard title="Total Crimes" value={user.total_crimes ?? 0} />
-              <StatCard title="Successful" value={user.successful_crimes ?? 0} />
-            </div>
+            <StatCard title="Money" value={`$${user.money}`} />
+            <StatCard title="Bullets" value={user.bullets ?? 0} />
+            <button onClick={() => attackPlayer(2, 50)} className="bg-red-600 px-4 py-2 rounded mt-4">Attack Player #2 with 50 bullets</button>
           </div>
         )}
 
         {activeTab === "crimes" && (
           <div>
             <h1 className="text-3xl font-bold mb-6">Crimes</h1>
-            {crimes.map((crime) => (
-              <div key={crime.id} className="bg-gray-800 p-4 rounded shadow flex justify-between items-center mb-2">
+            {crimes.map((c) => (
+              <div key={c.id} className="bg-gray-800 p-4 rounded shadow flex justify-between items-center mb-2">
                 <div>
-                  <h2 className="text-xl font-semibold">{crime.name}</h2>
-                  <p className="text-sm opacity-80">Reward: ${crime.min_reward}-{crime.max_reward} | Success {Math.round(crime.success_rate * 100)}%</p>
+                  <h2 className="text-xl">{c.name}</h2>
+                  <p>Reward: ${c.min_reward}-{c.max_reward} | Success {Math.round(c.success_rate * 100)}%</p>
                 </div>
-                <button onClick={() => commitCrime(crime.id)} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Commit</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === "bank" && (
-          <div>
-            <h1 className="text-3xl font-bold mb-6">Bank</h1>
-            <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="p-2 rounded text-black mb-2" />
-            <div className="space-x-2">
-              <button onClick={() => bankAction("deposit")} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">Deposit</button>
-              <button onClick={() => bankAction("withdraw")} className="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded">Withdraw</button>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "garage" && (
-          <div>
-            <h1 className="text-3xl font-bold mb-6">Garage</h1>
-            {cars.map((car) => (
-              <div key={car.id} className="bg-gray-800 p-4 rounded shadow flex justify-between items-center mb-2">
-                <div>{car.name} - ${car.price}</div>
-                <button onClick={() => buyCar(car.id)} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Buy</button>
+                <button onClick={() => commitCrime(c.id)} className="bg-blue-600 px-4 py-2 rounded">Commit</button>
               </div>
             ))}
           </div>
@@ -259,30 +240,29 @@ export default function App() {
             {properties.map((p) => (
               <div key={p.id} className="bg-gray-800 p-4 rounded shadow mb-2">
                 <h2 className="font-bold">{p.name}</h2>
-                <p>Base Price: ${p.base_price}</p>
-                {p.owner_id ? (
-                  <p>Owned by: {p.owner_id === user.id ? "You" : `User ${p.owner_id}`}</p>
-                ) : (
-                  <p>Not owned</p>
-                )}
-                {p.is_for_sale && <p className="text-yellow-400">For Sale: ${p.sale_price}</p>}
-                
-                {/* If unowned or for sale → buy button */}
-                {(!p.owner_id || p.is_for_sale) && (
-                  <button onClick={() => buyProperty(p.id)} className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded mt-2">Buy</button>
-                )}
-
-                {/* If you own it → management panel */}
-                {p.owner_id === user.id && (
-                  <div className="mt-2 space-y-2">
-                    <div>
-                      <input type="number" placeholder="Set custom price" value={customPrices[p.id] || ""} onChange={(e) => setCustomPrices({ ...customPrices, [p.id]: e.target.value })} className="p-1 text-black rounded" />
-                      <button onClick={() => setPropertyPrice(p.id)} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded ml-2">Update Price</button>
-                    </div>
-                    <div>
-                      <input type="number" placeholder="Sale price" value={salePrices[p.id] || ""} onChange={(e) => setSalePrices({ ...salePrices, [p.id]: e.target.value })} className="p-1 text-black rounded" />
-                      <button onClick={() => sellProperty(p.id)} className="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded ml-2">Sell Property</button>
-                    </div>
+                {p.name === "Bullet Factory" && (
+                  <div>
+                    {p.owner_id === user.id ? (
+                      <div>
+                        <p>Stock: {p.bullets ?? 0} bullets</p>
+                        <input type="number" placeholder="Set bullet price"
+                          value={customPrices[p.id] || ""}
+                          onChange={(e) => setCustomPrices({ ...customPrices, [p.id]: e.target.value })}
+                          className="p-1 text-black rounded"
+                        />
+                        <button onClick={() => setPropertyPrice(p.id)} className="bg-blue-600 px-3 py-1 rounded ml-2">Update Price</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <p>Stock available: {p.bullets ?? 0} bullets</p>
+                        <input type="number" placeholder="Bullets to buy"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="p-1 text-black rounded"
+                        />
+                        <button onClick={() => buyBullets(p.id, amount)} className="bg-green-600 px-3 py-1 rounded ml-2">Buy</button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -290,15 +270,30 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "inventory" && <div><h1 className="text-3xl font-bold mb-6">Inventory</h1><p className="opacity-80">Your items will appear here soon.</p></div>}
+        {activeTab === "gangs" && (
+          <div>
+            <h1 className="text-3xl font-bold mb-6">Gangs</h1>
+            <input type="text" placeholder="Gang name" value={gangName} onChange={(e) => setGangName(e.target.value)} className="p-2 rounded text-black mr-2" />
+            <button onClick={createGang} className="bg-green-600 px-3 py-1 rounded">Create Gang</button>
+            <div className="mt-4">
+              <input type="number" placeholder="Gang ID" value={joinGangId} onChange={(e) => setJoinGangId(e.target.value)} className="p-2 rounded text-black mr-2" />
+              <button onClick={joinGang} className="bg-blue-600 px-3 py-1 rounded">Join Gang</button>
+            </div>
+            <div className="mt-4">
+              <input type="number" placeholder="Target Gang ID" value={warTargetGang} onChange={(e) => setWarTargetGang(e.target.value)} className="p-2 rounded text-black mr-2" />
+              <input type="number" placeholder="Bullets to use" value={bulletsForWar} onChange={(e) => setBulletsForWar(e.target.value)} className="p-2 rounded text-black mr-2" />
+              <button onClick={startWar} className="bg-red-600 px-3 py-1 rounded">Start War</button>
+            </div>
+          </div>
+        )}
 
-        {activeTab === "rankings" && <div><h1 className="text-3xl font-bold mb-6">Rankings</h1><p className="opacity-80">Leaderboard coming soon.</p></div>}
+        {activeTab === "rankings" && <div><h1>Rankings Coming Soon</h1></div>}
       </main>
     </div>
   );
 }
 
-// --- UI Components ---
+// --- Components ---
 function TabButton({ icon, label, active, onClick }) {
   return (
     <button
@@ -314,7 +309,7 @@ function TabButton({ icon, label, active, onClick }) {
 
 function StatCard({ title, value }) {
   return (
-    <div className="bg-gray-800 rounded-xl p-4 shadow text-center">
+    <div className="bg-gray-800 rounded-xl p-4 shadow text-center mb-4">
       <div className="text-sm opacity-70">{title}</div>
       <div className="text-2xl font-bold text-green-400 mt-2">{value}</div>
     </div>
