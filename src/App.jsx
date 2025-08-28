@@ -128,17 +128,42 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "crimes" && (
-          <div>
-            <h1 className="text-3xl font-bold mb-6">Crimes</h1>
+     {activeTab === "crimes" && (
+  <div>
+    <h1 className="text-3xl font-bold mb-6">Crimes</h1>
+
+    {user.jail_until && new Date(user.jail_until) > new Date() ? (
+      <div className="bg-red-600 p-4 rounded mb-4">
+        🚔 You are in jail until{" "}
+        {new Date(user.jail_until).toLocaleTimeString()}.
+      </div>
+    ) : (
+      <div className="grid gap-4">
+        {crimes.map((crime) => (
+          <div
+            key={crime.id}
+            className="bg-gray-800 p-4 rounded shadow flex justify-between items-center"
+          >
+            <div>
+              <h2 className="text-xl font-semibold">{crime.name}</h2>
+              <p className="text-sm opacity-80">
+                Reward: ${crime.min_reward} - ${crime.max_reward} | Success
+                Rate: {Math.round(crime.success_rate * 100)}%
+              </p>
+            </div>
             <button
-              onClick={() => commitCrime(1)}
-              className="bg-blue-600 hover:bg-blue-700 p-3 rounded shadow"
+              onClick={() => commitCrime(crime.id)}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
             >
-              Commit Crime #1
+              Commit
             </button>
           </div>
-        )}
+        ))}
+      </div>
+    )}
+  </div>
+)}
+
 
         {activeTab === "inventory" && (
           <div>
@@ -179,3 +204,4 @@ function StatCard({ title, value }) {
     </div>
   );
 }
+
