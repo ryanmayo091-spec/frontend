@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_URL = "https://frontend-z7yj.onrender.com"; // replace with your backend URL
+const API_URL = "https://mafia-game-kxct.onrender.com"; // replace with your backend URL
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -123,4 +123,5 @@ export default function App() {
     </div>
   );
 }
+
 
