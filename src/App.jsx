@@ -11,7 +11,12 @@ export default function App() {
   const [crimes, setCrimes] = useState([]);
   const [activeTab, setActiveTab] = useState("home");
 
-// Fetch crimes when logged in
+useEffect(() => {
+  const saved = localStorage.getItem("user");
+  if (saved) setUser(JSON.parse(saved));
+}, []);
+
+  // Fetch crimes when logged in
 useEffect(() => {
   if (user) {
     fetch(`${API_URL}/crimes`)
@@ -209,5 +214,6 @@ function StatCard({ title, value }) {
     </div>
   );
 }
+
 
 
