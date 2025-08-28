@@ -52,18 +52,36 @@ useEffect(() => {
     else alert(data.error || "Register failed");
   }
 
-  async function commitCrime(crimeId) {
-    const res = await fetch(`${API_URL}/commit-crime`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, crimeId }),
-    });
-    const data = await res.json();
-    if (data.success && data.user) {
-      setUser(data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
-    }
+async function commitCrime(crimeId) {
+  const res = await fetch(`${API_URL}/commit-crime`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: user.id, crimeId }),
+  });
+  const data = await res.json();
+
+  if (data.jail_until) {
+    // User failed a crime and is jailed
+    setUser({ ...user, jail_until: data.jail_until });
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...user, jail_until: data.jail_until })
+    );
+    alert(data.message || "You are in jail!");
+  } else if (data.success) {
+    // Crime success
+    setUser({ ...user, money: data.newBalance });
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...user, money: data.newBalance })
+    );
+    alert(`Success! You earned $${data.reward}`);
+  } else {
+    // Crime failed but not jailed
+    alert(data.message || "Crime failed!");
   }
+}
+
 
   function logout() {
     setUser(null);
@@ -214,6 +232,7 @@ function StatCard({ title, value }) {
     </div>
   );
 }
+
 
 
 
