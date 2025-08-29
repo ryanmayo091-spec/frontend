@@ -1,7 +1,7 @@
 // src/App.jsx
 import { useEffect, useState } from "react";
 import {
-  Home, Sword, Package, Trophy, Banknote, Car, Building2, Users, Landmark, ShoppingBag, LogOut
+  Home, Sword, Package, Trophy, Banknote, Car, Building2, Users, Landmark, ShoppingBag, LogOut, Shield
 } from "lucide-react";
 
 const API_URL = "https://mafia-game-kxct.onrender.com";
@@ -12,16 +12,21 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [crimes, setCrimes] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [cars, setCars] = useState([]);
+  const [items, setItems] = useState([]);
+  const [gangWars, setGangWars] = useState([]);
   const [activeTab, setActiveTab] = useState("home");
+  const [amount, setAmount] = useState("");
+  const [customPrices, setCustomPrices] = useState({});
+  const [casinoResult, setCasinoResult] = useState("");
 
-  // Refresh loop for timers
+  // Refresh loop
   useEffect(() => {
-    const interval = setInterval(() => {
-      setUser((u) => (u ? { ...u } : u));
-    }, 1000);
+    const interval = setInterval(() => setUser((u) => (u ? { ...u } : u)), 1000);
     return () => clearInterval(interval);
   }, []);
 
+  // Load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("user");
     if (saved) setUser(JSON.parse(saved));
@@ -31,50 +36,147 @@ export default function App() {
     if (user) {
       fetch(`${API_URL}/crimes`).then((r) => r.json()).then(setCrimes);
       refreshProperties();
+      refreshCars();
+      refreshItems();
+      refreshWars();
     }
   }, [user]);
 
+  // --- Auth ---
   async function login(e) {
     e.preventDefault();
     const res = await fetch(`${API_URL}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
     const data = await res.json();
-    if (data.success) {
-      setUser(data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
-    } else alert(data.error || "Login failed");
+    if (data.success) { setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user)); }
+    else alert(data.error || "Login failed");
   }
 
   async function register(e) {
     e.preventDefault();
     const res = await fetch(`${API_URL}/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
     const data = await res.json();
-    if (data.success) alert("Registered! Please log in.");
-    else alert(data.error || "Register failed");
+    alert(data.success ? "Registered! Please log in." : data.error || "Register failed");
   }
 
-  function logout() {
-    setUser(null);
-    localStorage.removeItem("user");
+  function logout() { setUser(null); localStorage.removeItem("user"); }
+
+  // --- Crimes ---
+  async function commitCrime(crimeId) {
+    const res = await fetch(`${API_URL}/commit-crime`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, crimeId }),
+    });
+    const data = await res.json();
+    if (data.user) { setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user)); }
+    alert(data.message || (data.success ? `You earned $${data.reward}` : "Failed!"));
   }
 
+  // --- Bank ---
+  async function deposit(amount) {
+    const res = await fetch(`${API_URL}/bank/deposit`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, amount: parseInt(amount) }),
+    });
+    const data = await res.json();
+    if (data.success) { setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user)); }
+    alert(data.message || data.error);
+  }
+
+  async function withdraw(amount) {
+    const res = await fetch(`${API_URL}/bank/withdraw`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, amount: parseInt(amount) }),
+    });
+    const data = await res.json();
+    if (data.success) { setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user)); }
+    alert(data.message || data.error);
+  }
+
+  // --- Properties ---
   async function refreshProperties() {
-    try {
-      const res = await fetch(`${API_URL}/properties`);
-      const data = await res.json();
-      setProperties(data);
-    } catch {
-      console.log("Properties not loaded");
-    }
+    try { const res = await fetch(`${API_URL}/properties`); setProperties(await res.json()); }
+    catch { console.log("Properties not loaded"); }
   }
 
+  async function setPropertyPrice(propertyId) {
+    const res = await fetch(`${API_URL}/properties/set-price`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, propertyId, customPrice: parseInt(customPrices[propertyId]) }),
+    });
+    const data = await res.json();
+    alert(data.success ? "Property price updated!" : data.error);
+    refreshProperties();
+  }
+
+  // --- Garage ---
+  async function refreshCars() { 
+    try { const res = await fetch(`${API_URL}/garage/${user.id}`); setCars(await res.json()); }
+    catch { setCars([]); }
+  }
+
+  async function buyCar(model) {
+    const res = await fetch(`${API_URL}/garage/buy`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, model }),
+    });
+    alert((await res.json()).message);
+    refreshCars();
+  }
+
+  async function sellCar(carId) {
+    const res = await fetch(`${API_URL}/garage/sell`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, carId }),
+    });
+    alert((await res.json()).message);
+    refreshCars();
+  }
+
+  // --- Casino ---
+  async function playSlots() {
+    const res = await fetch(`${API_URL}/casino/slots`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id }),
+    });
+    setCasinoResult((await res.json()).message);
+  }
+
+  async function playBlackjack() {
+    const res = await fetch(`${API_URL}/casino/blackjack`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id }),
+    });
+    setCasinoResult((await res.json()).message);
+  }
+
+  // --- Black Market ---
+  async function refreshItems() { 
+    try { const res = await fetch(`${API_URL}/blackmarket`); setItems(await res.json()); }
+    catch { setItems([]); }
+  }
+
+  async function buyItem(itemId) {
+    const res = await fetch(`${API_URL}/blackmarket/buy`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, itemId }),
+    });
+    alert((await res.json()).message);
+    refreshItems();
+  }
+
+  // --- Gangs ---
+  async function refreshWars() { 
+    try { const res = await fetch(`${API_URL}/gang/wars`); setGangWars(await res.json()); }
+    catch { setGangWars([]); }
+  }
+
+  // --- UI ---
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -106,6 +208,9 @@ export default function App() {
           <TabButton icon={<Car size={18} />} label="Garage" active={activeTab === "garage"} onClick={() => setActiveTab("garage")} />
           <TabButton icon={<ShoppingBag size={18} />} label="Black Market" active={activeTab === "blackmarket"} onClick={() => setActiveTab("blackmarket")} />
           <TabButton icon={<Trophy size={18} />} label="Rankings" active={activeTab === "rankings"} onClick={() => setActiveTab("rankings")} />
+          {user.role === "admin" || user.role === "mod" ? (
+            <TabButton icon={<Shield size={18} />} label="Admin Panel" active={activeTab === "admin"} onClick={() => setActiveTab("admin")} />
+          ) : null}
         </nav>
         <div className="mt-auto pt-6 border-t border-gray-700 space-y-2 text-center">
           <div className="text-lg font-semibold text-green-400">{user.username}</div>
@@ -117,16 +222,78 @@ export default function App() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-8">
-        {activeTab === "home" && <TabContent title="Home" desc="Welcome to the Mafia underworld. This is your empire’s dashboard — track your money, bullets, and progress here." />}
-        {activeTab === "crimes" && <TabContent title="Crimes" desc="Every empire begins with crime. From petty theft to heists, crimes fuel your rise in the underworld." />}
-        {activeTab === "bank" && <TabContent title="Bank" desc="The Bank is where dirty money finds safety. Deposit your cash to keep it safe from rivals, withdraw to invest in your empire." />}
-        {activeTab === "properties" && <TabContent title="Properties" desc="Properties are the backbone of wealth. Bullet factories, casinos, and nightclubs — they print money and power if you own them." />}
-        {activeTab === "gangs" && <TabContent title="Gangs" desc="Family is power. Join a gang, fight rivals, and dominate turf. Together you’re stronger than the law itself." />}
-        {activeTab === "casino" && <TabContent title="Casino" desc="The Casino is the mafia’s playground. Gamble, cheat, or own the tables — fortune and ruin live here." />}
-        {activeTab === "garage" && <TabContent title="Garage" desc="The Garage stores your vehicles. From beat-up sedans to armored beasts, cars are tools of crime and symbols of power." />}
-        {activeTab === "blackmarket" && <TabContent title="Black Market" desc="The Black Market is where the real deals happen. Weapons, drugs, rare items — nothing is legal, but everything has a price." />}
-        {activeTab === "rankings" && <TabContent title="Rankings" desc="The leaderboard of crime. The richest, the deadliest, the most feared — see who rules the streets." />}
+      <main className="flex-1 p-8 space-y-6">
+        {activeTab === "home" && <TabContent title="Home" desc="Welcome to the Mafia underworld. Track your empire here." />}
+        {activeTab === "crimes" && crimes.map((c) => (
+          <div key={c.id} className="bg-gray-800 p-4 rounded shadow flex justify-between items-center mb-2">
+            <div><h2 className="text-xl">{c.name}</h2><p>Reward: ${c.min_reward}-{c.max_reward}</p></div>
+            <button onClick={() => commitCrime(c.id)} className="bg-blue-600 px-4 py-2 rounded">Commit</button>
+          </div>
+        ))}
+        {activeTab === "bank" && (
+          <div className="bg-gray-800 p-6 rounded-lg shadow space-y-4 max-w-md">
+            <p>💰 Cash: ${user.money} | 🏦 Bank: ${user.bank_balance}</p>
+            <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="p-2 text-black rounded w-full" />
+            <div className="flex gap-2">
+              <button onClick={() => deposit(amount)} className="bg-green-600 px-4 py-2 rounded w-1/2">Deposit</button>
+              <button onClick={() => withdraw(amount)} className="bg-blue-600 px-4 py-2 rounded w-1/2">Withdraw</button>
+            </div>
+          </div>
+        )}
+        {activeTab === "properties" && properties.map((p) => (
+          <div key={p.id} className="bg-gray-800 p-4 rounded shadow mb-2">
+            <h2 className="font-bold">{p.name}</h2>
+            {p.owner_id === user.id ? (
+              <div>
+                <p>Stock: {p.bullets ?? 0} bullets</p>
+                <input type="number" placeholder="Set price" value={customPrices[p.id] || ""} onChange={(e) => setCustomPrices({ ...customPrices, [p.id]: e.target.value })} className="p-1 text-black rounded" />
+                <button onClick={() => setPropertyPrice(p.id)} className="bg-blue-600 px-3 py-1 rounded ml-2">Update</button>
+              </div>
+            ) : <p>Owned by another player</p>}
+          </div>
+        ))}
+        {activeTab === "garage" && (
+          <div>
+            <h1 className="text-xl mb-2">Your Cars</h1>
+            {cars.map((car) => (
+              <div key={car.id} className="bg-gray-800 p-2 mb-2 rounded flex justify-between">
+                <span>{car.model}</span>
+                <button onClick={() => sellCar(car.id)} className="bg-red-600 px-2 py-1 rounded">Sell</button>
+              </div>
+            ))}
+            <button onClick={() => buyCar("Sedan")} className="bg-green-600 px-4 py-2 rounded">Buy Sedan ($1000)</button>
+          </div>
+        )}
+        {activeTab === "casino" && (
+          <div className="space-y-4">
+            <button onClick={playSlots} className="bg-purple-600 px-4 py-2 rounded">Play Slots</button>
+            <button onClick={playBlackjack} className="bg-yellow-600 px-4 py-2 rounded">Play Blackjack</button>
+            <p>{casinoResult}</p>
+          </div>
+        )}
+        {activeTab === "blackmarket" && items.map((i) => (
+          <div key={i.id} className="bg-gray-800 p-4 rounded mb-2 flex justify-between">
+            <span>{i.name} - ${i.price}</span>
+            <button onClick={() => buyItem(i.id)} className="bg-green-600 px-2 py-1 rounded">Buy</button>
+          </div>
+        ))}
+        {activeTab === "gangs" && (
+          <div>
+            <h1 className="text-xl mb-2">Gang Wars History</h1>
+            {gangWars.map((w) => (
+              <div key={w.id} className="bg-gray-800 p-2 mb-2 rounded">
+                <p>{w.gang_a} vs {w.gang_b} → Winner: {w.winner}</p>
+                <small>{new Date(w.war_time).toLocaleString()}</small>
+              </div>
+            ))}
+          </div>
+        )}
+        {activeTab === "admin" && (user.role === "admin" || user.role === "mod") && (
+          <div>
+            <h1 className="text-2xl mb-4">Admin Panel</h1>
+            <p className="opacity-70">Here admins and mods can manage players, properties, and economy. (Backend APIs needed)</p>
+          </div>
+        )}
       </main>
     </div>
   );
@@ -146,13 +313,12 @@ function TabButton({ icon, label, active, onClick }) {
   );
 }
 
-// Tab content wrapper with description
+// Tab content wrapper
 function TabContent({ title, desc }) {
   return (
     <div>
       <h1 className="text-4xl font-extrabold mb-4">{title}</h1>
       <div className="bg-gray-800 p-4 rounded-lg shadow mb-6 italic text-gray-300">{desc}</div>
-      <p className="opacity-60">[Interactive content for {title} will be added here...]</p>
     </div>
   );
 }
