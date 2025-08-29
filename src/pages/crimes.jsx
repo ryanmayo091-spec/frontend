@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 export default function Crimes({ user, API_URL }) {
-  const [crimes, setCrimes] = useState({});
-  const [crimeLog, setCrimeLog] = useState([]);
-  const [openCategories, setOpenCategories] = useState({});
+  const [crimes, setCrimes] = useState([]);
+  const [openCategory, setOpenCategory] = useState(null);
+  const [lastCrimes, setLastCrimes] = useState(user.last_crimes || {});
 
   useEffect(() => {
     fetch(`${API_URL}/crimes`)
@@ -21,101 +20,89 @@ export default function Crimes({ user, API_URL }) {
     });
     const data = await res.json();
 
-    if (data.user) {
-      localStorage.setItem("user", JSON.stringify(data.user));
-      window.dispatchEvent(new Event("storage"));
+    if (data.success) {
+      alert(`✅ Success! You earned $${data.reward} and ${data.xpGain} XP`);
+    } else {
+      alert(data.message || `❌ Crime failed but gained ${data.xpGain} XP`);
     }
 
-    setCrimeLog((prev) => [
-      { story: data.story, success: data.success, time: new Date().toLocaleTimeString() },
-      ...prev.slice(0, 9),
-    ]);
+    if (data.user) {
+      setLastCrimes(data.user.last_crimes || {});
+      localStorage.setItem("user", JSON.stringify(data.user));
+    }
   }
 
-  function getCooldownEnd(crime) {
-    if (!user.last_crimes) return 0;
-    const last = user.last_crimes[crime.id];
-    if (!last) return 0;
-    return new Date(last).getTime() + crime.cooldown_seconds * 1000;
+  function getCooldown(crimeId, cooldown) {
+    if (!lastCrimes || !lastCrimes[crimeId]) return 0;
+    const end = new Date(lastCrimes[crimeId]).getTime() + cooldown * 1000;
+    return Math.max(0, Math.ceil((end - Date.now()) / 1000));
   }
 
-  function toggleCategory(cat) {
-    setOpenCategories((prev) => ({
-      ...prev,
-      [cat]: !prev[cat],
-    }));
-  }
+  const grouped = crimes.reduce((acc, crime) => {
+    const category = crime.category || "Miscellaneous";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(crime);
+    return acc;
+  }, {});
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">💀 Crimes</h1>
+      <h1 className="text-3xl font-bold mb-2">💀 Crimes</h1>
       <p className="mb-6 opacity-80">
-        From petty thefts to daring heists, every choice builds your reputation. Fail, and prison awaits.
+        Gain XP and rank up as you commit crimes. Higher ranks unlock tougher, more rewarding crimes.
       </p>
 
-      {Object.keys(crimes).map((category) => (
-        <div key={category} className="mb-6">
-          <button
-            onClick={() => toggleCategory(category)}
-            className="w-full text-left bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded flex justify-between items-center"
-          >
-            <span className="text-xl font-semibold">{category} Crimes</span>
-            <span>{openCategories[category] ? "▲" : "▼"}</span>
-          </button>
+      <div className="bg-gray-800 p-4 rounded mb-6">
+        <p>👤 Rank: <span className="text-green-400 font-bold">{user.rank}</span></p>
+        <p>⭐ XP: <span className="text-blue-400 font-bold">{user.xp}</span></p>
+      </div>
 
-          <AnimatePresence>
-            {openCategories[category] && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mt-4 space-y-4 overflow-hidden"
-              >
-                {crimes[category].map((crime) => {
-                  const cooldownEnd = getCooldownEnd(crime);
-                  const remaining = Math.max(0, Math.ceil((cooldownEnd - Date.now()) / 1000));
+      <div className="space-y-4">
+        {Object.entries(grouped).map(([category, crimeList]) => (
+          <div key={category} className="bg-gray-800 rounded shadow">
+            <button
+              onClick={() => setOpenCategory(openCategory === category ? null : category)}
+              className="w-full flex justify-between items-center px-4 py-3 font-semibold text-left text-green-400 hover:bg-gray-700 rounded"
+            >
+              {category}
+              <span>{openCategory === category ? "▲" : "▼"}</span>
+            </button>
 
+            {openCategory === category && (
+              <div className="p-4 space-y-4">
+                {crimeList.map((crime) => {
+                  const remaining = getCooldown(crime.id, crime.cooldown_seconds);
                   return (
-                    <div key={crime.id} className="bg-gray-800 p-4 rounded shadow space-y-2">
+                    <div
+                      key={crime.id}
+                      className="bg-gray-900 p-4 rounded flex justify-between items-center"
+                    >
                       <div>
-                        <h3 className="text-xl font-semibold">{crime.name}</h3>
+                        <h3 className="text-lg font-semibold">{crime.name}</h3>
                         <p className="text-sm opacity-80">{crime.description}</p>
-                        <p className="text-sm opacity-70 mt-1">
-                          💵 ${crime.min_reward} - ${crime.max_reward} | 🎯 {Math.round(crime.success_rate * 100)}% success | ⏳ {crime.cooldown_seconds}s cooldown
+                        <p className="text-xs opacity-60">
+                          💵 ${crime.min_reward} - ${crime.max_reward} | 🎯{" "}
+                          {Math.round(crime.success_rate * 100)}% | ⏳ {crime.cooldown_seconds}s
                         </p>
                       </div>
                       {remaining > 0 ? (
-                        <span className="text-red-400 text-sm">⏳ {remaining}s cooldown</span>
+                        <span className="text-red-400 text-sm">⏳ {remaining}s</span>
                       ) : (
                         <button
                           onClick={() => commitCrime(crime.id)}
                           className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
                         >
-                          Commit Crime
+                          Commit
                         </button>
                       )}
                     </div>
                   );
                 })}
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
-        </div>
-      ))}
-
-      {crimeLog.length > 0 && (
-        <div className="bg-gray-900 p-4 rounded shadow mt-6">
-          <h3 className="font-semibold mb-2">📝 Crime Log</h3>
-          <ul className="space-y-1 text-sm">
-            {crimeLog.map((log, i) => (
-              <li key={i} className={log.success ? "text-green-400" : "text-red-400"}>
-                [{log.time}] {log.story}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
