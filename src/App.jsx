@@ -10,7 +10,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [activeTab, setActiveTab] = useState("home");
 
-  // Game states
+  // Game data
   const [crimes, setCrimes] = useState([]);
   const [amount, setAmount] = useState("");
   const [cars, setCars] = useState([]);
@@ -18,7 +18,7 @@ export default function App() {
   const [blackMarket, setBlackMarket] = useState([]);
   const [casinoMsg, setCasinoMsg] = useState("");
 
-  // Admin states (already implemented in last version)
+  // Admin data
   const [adminUsers, setAdminUsers] = useState([]);
   const [stats, setStats] = useState(null);
   const [economy, setEconomy] = useState(null);
@@ -27,17 +27,18 @@ export default function App() {
   const [slotOdds, setSlotOdds] = useState("");
   const [bjOdds, setBjOdds] = useState("");
 
+  // Auto-refresh (cooldowns)
   useEffect(() => {
     const saved = localStorage.getItem("user");
     if (saved) setUser(JSON.parse(saved));
+    const interval = setInterval(() => setUser((u) => (u ? { ...u } : u)), 1000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     if (user) {
       fetch(`${API_URL}/crimes`).then(res => res.json()).then(setCrimes);
-      fetchGarage();
-      fetchProperties();
-      fetchBlackMarket();
+      fetchGarage(); fetchProperties(); fetchBlackMarket();
     }
   }, [user]);
 
@@ -50,8 +51,7 @@ export default function App() {
     });
     const data = await res.json();
     if (data.success) {
-      setUser(data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user));
     } else alert(data.error || "Login failed");
   }
   async function register(e) {
@@ -64,9 +64,21 @@ export default function App() {
     if (data.success) alert("Registered! Please log in.");
     else alert(data.error || "Register failed");
   }
-  function logout() {
-    setUser(null);
-    localStorage.removeItem("user");
+  function logout() { setUser(null); localStorage.removeItem("user"); }
+
+  // --- Crimes ---
+  async function commitCrime(crimeId) {
+    const res = await fetch(`${API_URL}/commit-crime`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, crimeId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user));
+      alert(`Success! You earned $${data.reward}`);
+    } else {
+      alert(data.message || "Failed!"); setUser(data.user || user);
+    }
   }
 
   // --- Bank ---
@@ -76,10 +88,8 @@ export default function App() {
       body: JSON.stringify({ userId: user.id, amount: parseInt(amount) }),
     });
     const data = await res.json();
-    if (data.success) {
-      setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user));
-      alert(data.message);
-    } else alert(data.error);
+    if (data.success) { setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user)); }
+    else alert(data.error);
   }
   async function withdraw() {
     const res = await fetch(`${API_URL}/bank/withdraw`, {
@@ -87,43 +97,23 @@ export default function App() {
       body: JSON.stringify({ userId: user.id, amount: parseInt(amount) }),
     });
     const data = await res.json();
-    if (data.success) {
-      setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user));
-      alert(data.message);
-    } else alert(data.error);
+    if (data.success) { setUser(data.user); localStorage.setItem("user", JSON.stringify(data.user)); }
+    else alert(data.error);
   }
 
   // --- Garage ---
   async function fetchGarage() {
-    const res = await fetch(`${API_URL}/garage/${user.id}`);
-    const data = await res.json();
-    setCars(data);
-  }
-  async function buyCar(model) {
-    const res = await fetch(`${API_URL}/garage/buy`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, model }),
-    });
-    const data = await res.json(); alert(data.message); fetchGarage();
-  }
-  async function sellCar(carId) {
-    const res = await fetch(`${API_URL}/garage/sell`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, carId }),
-    });
-    const data = await res.json(); alert(data.message); fetchGarage();
+    const res = await fetch(`${API_URL}/garage/${user.id}`); setCars(await res.json());
   }
 
   // --- Properties ---
   async function fetchProperties() {
-    const res = await fetch(`${API_URL}/properties`);
-    const data = await res.json(); setProperties(data);
+    const res = await fetch(`${API_URL}/properties`); setProperties(await res.json());
   }
 
   // --- Black Market ---
   async function fetchBlackMarket() {
-    const res = await fetch(`${API_URL}/blackmarket`);
-    const data = await res.json(); setBlackMarket(data);
+    const res = await fetch(`${API_URL}/blackmarket`); setBlackMarket(await res.json());
   }
   async function buyItem(itemId) {
     const res = await fetch(`${API_URL}/blackmarket/buy`, {
@@ -149,15 +139,15 @@ export default function App() {
     const data = await res.json(); setCasinoMsg(data.message);
   }
 
-  // --- UI ---
+  // --- UI (Login/Register) ---
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
         <div className="bg-gray-800 p-6 rounded-lg w-80">
           <h1 className="text-2xl font-bold mb-4 text-center">Mafia Game</h1>
           <form onSubmit={login} className="flex flex-col gap-2">
-            <input className="p-2 rounded text-black" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-            <input type="password" className="p-2 rounded text-black" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input className="p-2 rounded text-black" placeholder="Username" value={username} onChange={(e)=>setUsername(e.target.value)} />
+            <input type="password" className="p-2 rounded text-black" placeholder="Password" value={password} onChange={(e)=>setPassword(e.target.value)} />
             <button className="bg-green-600 hover:bg-green-700 p-2 rounded">Login</button>
           </form>
           <button onClick={register} className="mt-3 text-sm underline block mx-auto hover:text-green-400">Or Register</button>
@@ -180,6 +170,9 @@ export default function App() {
           <TabButton icon={<Store size={18} />} label="Black Market" active={activeTab === "blackmarket"} onClick={() => setActiveTab("blackmarket")} />
           <TabButton icon={<Shield size={18} />} label="Casino" active={activeTab === "casino"} onClick={() => setActiveTab("casino")} />
           <TabButton icon={<Users size={18} />} label="Rankings" active={activeTab === "rankings"} onClick={() => setActiveTab("rankings")} />
+          {(user.role === "admin" || user.role === "mod") && (
+            <TabButton icon={<Trophy size={18} />} label="Admin" active={activeTab === "admin"} onClick={() => setActiveTab("admin")} />
+          )}
         </nav>
         <div className="mt-auto pt-6 border-t border-gray-700">
           <div className="mb-2 text-sm opacity-80">{user.username}</div>
@@ -189,27 +182,35 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main Content */}
       <main className="flex-1 p-6 overflow-y-auto">
-        {activeTab === "home" && <h1 className="text-3xl mb-4">Dashboard</h1>}
-
+        {activeTab === "home" && <StoryCard title="Home" text="Welcome to the underworld. Here you’ll see your stats and control your empire." />}
+        {activeTab === "crimes" && (
+          <div>
+            <StoryCard title="Crimes" text="Commit crimes to earn money and respect. The higher the risk, the higher the reward... or prison time." />
+            {crimes.map((c) => (
+              <div key={c.id} className="bg-gray-800 p-3 rounded mb-2 flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg">{c.name}</h2>
+                  <p className="text-sm opacity-70">Reward: ${c.min_reward}-{c.max_reward}, Success {Math.round(c.success_rate*100)}%</p>
+                </div>
+                <button onClick={() => commitCrime(c.id)} className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">Do</button>
+              </div>
+            ))}
+          </div>
+        )}
         {activeTab === "bank" && (
           <div>
-            <h1 className="text-2xl mb-4">Bank</h1>
+            <StoryCard title="Bank" text="Deposit your dirty cash here. Withdraw when needed. Careful, banks may be targets too." />
             <p>Cash: ${user.money} | Bank: ${user.bank_balance}</p>
             <input type="number" value={amount} onChange={(e)=>setAmount(e.target.value)} placeholder="Amount" className="p-2 rounded text-black mr-2" />
             <button onClick={deposit} className="bg-green-600 px-3 py-1 rounded mr-2">Deposit</button>
             <button onClick={withdraw} className="bg-blue-600 px-3 py-1 rounded">Withdraw</button>
           </div>
         )}
-
         {activeTab === "garage" && (
           <div>
-            <h1 className="text-2xl mb-4">Garage</h1>
-            <button onClick={()=>buyCar("Sedan")} className="bg-green-600 px-3 py-1 rounded mr-2">Buy Sedan $1000</button>
-            <button onClick={()=>buyCar("Sports")} className="bg-green-600 px-3 py-1 rounded mr-2">Buy Sports $5000</button>
-            <button onClick={()=>buyCar("Armored")} className="bg-green-600 px-3 py-1 rounded">Buy Armored $20000</button>
-            <h2 className="mt-4">Your Cars:</h2>
+            <StoryCard title="Garage" text="Your cars are status symbols. Buy, collect, and sell them — or use them in getaways." />
             {cars.map(car => (
               <div key={car.id} className="bg-gray-800 p-2 my-2 rounded flex justify-between">
                 <span>{car.model}</span>
@@ -218,21 +219,19 @@ export default function App() {
             ))}
           </div>
         )}
-
         {activeTab === "properties" && (
           <div>
-            <h1 className="text-2xl mb-4">Properties</h1>
+            <StoryCard title="Properties" text="Factories, casinos, and nightclubs are the real power. Own them to control the streets." />
             {properties.map(p => (
               <div key={p.id} className="bg-gray-800 p-2 mb-2 rounded">
-                <p>{p.name} - Owner: {p.owner_id || "None"} | Price: ${p.custom_price || p.base_price}</p>
+                <p>{p.name} - Owner: {p.owner_id || "State"} | Price: ${p.custom_price || p.base_price}</p>
               </div>
             ))}
           </div>
         )}
-
         {activeTab === "blackmarket" && (
           <div>
-            <h1 className="text-2xl mb-4">Black Market</h1>
+            <StoryCard title="Black Market" text="The underground marketplace. Buy weapons, goods, and contraband from other players." />
             {blackMarket.map(item => (
               <div key={item.id} className="bg-gray-800 p-2 mb-2 rounded flex justify-between">
                 <span>{item.name} - ${item.price}</span>
@@ -241,13 +240,19 @@ export default function App() {
             ))}
           </div>
         )}
-
         {activeTab === "casino" && (
           <div>
-            <h1 className="text-2xl mb-4">Casino</h1>
-            <button onClick={playSlots} className="bg-purple-600 px-3 py-1 rounded mr-2">Play Slots ($100)</button>
-            <button onClick={playBlackjack} className="bg-purple-800 px-3 py-1 rounded">Play Blackjack ($200)</button>
+            <StoryCard title="Casino" text="Welcome to the high-roller’s den. Spin the slots or play blackjack — the house always wins." />
+            <button onClick={playSlots} className="bg-purple-600 px-3 py-1 rounded mr-2">Slots ($100)</button>
+            <button onClick={playBlackjack} className="bg-purple-800 px-3 py-1 rounded">Blackjack ($200)</button>
             {casinoMsg && <p className="mt-3">{casinoMsg}</p>}
+          </div>
+        )}
+        {activeTab === "rankings" && <StoryCard title="Rankings" text="See who rules the underworld. Money, crimes, and power decide the top dogs." />}
+        {activeTab === "admin" && (user.role === "admin" || user.role === "mod") && (
+          <div>
+            <StoryCard title="Admin Panel" text="Oversee the entire empire. Manage players, control the economy, and keep balance in the underworld." />
+            {/* Admin controls go here (stats, users, casino, economy) */}
           </div>
         )}
       </main>
@@ -255,11 +260,19 @@ export default function App() {
   );
 }
 
-// Helpers
+// UI helpers
 function TabButton({ icon, label, active, onClick }) {
   return (
     <button onClick={onClick} className={`flex items-center gap-2 px-3 py-2 rounded ${active ? "bg-gray-700 text-green-400" : "hover:bg-gray-700"}`}>
       {icon} {label}
     </button>
+  );
+}
+function StoryCard({ title, text }) {
+  return (
+    <div className="bg-gray-800 p-4 rounded mb-4 shadow">
+      <h1 className="text-2xl font-bold mb-2">{title}</h1>
+      <p className="opacity-80">{text}</p>
+    </div>
   );
 }
