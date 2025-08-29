@@ -1,8 +1,18 @@
-export default function StatCard({ title, value }) {
+export default function StatCard({ title, value, color }) {
+  const colors = {
+    green: "text-green-400",
+    blue: "text-blue-400",
+    red: "text-red-400",
+    yellow: "text-yellow-400",
+    purple: "text-purple-400"
+  };
+
   return (
-    <div className="bg-gray-800 rounded-xl p-4 shadow text-center">
-      <div className="text-sm opacity-70">{title}</div>
-      <div className="text-2xl font-bold text-green-400 mt-2">{value}</div>
+    <div className="bg-gray-800 p-4 rounded shadow">
+      <p className="text-sm opacity-70">{title}</p>
+      <p className={`text-2xl font-bold ${colors[color] || "text-white"}`}>
+        {value}
+      </p>
     </div>
   );
 }
