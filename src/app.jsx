@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { Home, Sword, Package, Trophy, Car, Banknote, Lock, LogOut } from "lucide-react";
 
-// Pages
-import Crimes from "./pages/Crimes";
-import Bank from "./pages/Bank";
-import Garage from "./pages/Garage";
-import Prison from "./pages/Prison";
-import Rankings from "./pages/Rankings";
+// Pages (all lowercase file names)
+import Crimes from "./pages/crimes";
+import Bank from "./pages/bank";
+import Garage from "./pages/garage";
+import Prison from "./pages/prison";
+import Rankings from "./pages/rankings";
+
+// Components (all lowercase file names)
+import SectionCard from "./components/sectioncard";
+import StatCard from "./components/statcard";
+import NavButton from "./components/navbutton";
 
 const API_URL = "https://mafia-game-kxct.onrender.com";
 
@@ -16,7 +21,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [activeTab, setActiveTab] = useState("home");
 
-  // Auto-refresh user (for countdowns etc)
+  // Auto-refresh user (for cooldowns etc.)
   useEffect(() => {
     const interval = setInterval(() => {
       setUser((u) => (u ? { ...u } : u));
@@ -64,7 +69,7 @@ export default function App() {
     localStorage.removeItem("user");
   }
 
-  // Login/Register screen
+  // === LOGIN SCREEN ===
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -99,6 +104,7 @@ export default function App() {
     );
   }
 
+  // === MAIN APP ===
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
       {/* Sidebar */}
@@ -126,14 +132,14 @@ export default function App() {
       {/* Main content */}
       <main className="flex-1 p-8">
         {activeTab === "home" && (
-          <div>
-            <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-            <p className="opacity-80 mb-6">
-              Welcome, {user.username}. This is your empire overview. From here,
-              you’ll track your wealth, reputation, and progress as you rise to
-              power.
-            </p>
-          </div>
+          <SectionCard title="Dashboard" description="Your life in the underworld.">
+            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+              <StatCard title="Money" value={`$${user.money ?? 0}`} />
+              <StatCard title="Total Crimes" value={user.total_crimes ?? 0} />
+              <StatCard title="Successful" value={user.successful_crimes ?? 0} />
+              <StatCard title="Unsuccessful" value={user.unsuccessful_crimes ?? 0} />
+            </div>
+          </SectionCard>
         )}
         {activeTab === "crimes" && <Crimes user={user} API_URL={API_URL} />}
         {activeTab === "bank" && <Bank user={user} API_URL={API_URL} />}
