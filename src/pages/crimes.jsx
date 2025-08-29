@@ -20,11 +20,7 @@ export default function Crimes({ user, API_URL }) {
     });
     const data = await res.json();
 
-    if (data.success) {
-      alert(`✅ Success! You earned $${data.reward} and ${data.xpGain} XP`);
-    } else {
-      alert(data.message || `❌ Crime failed but gained ${data.xpGain} XP`);
-    }
+    alert(data.message);
 
     if (data.user) {
       setLastCrimes(data.user.last_crimes || {});
@@ -49,7 +45,7 @@ export default function Crimes({ user, API_URL }) {
     <div>
       <h1 className="text-3xl font-bold mb-2">💀 Crimes</h1>
       <p className="mb-6 opacity-80">
-        Gain XP and rank up as you commit crimes. Higher ranks unlock tougher, more rewarding crimes.
+        Crimes earn you money, XP, and raise your rank. Higher ranks unlock bigger jobs.
       </p>
 
       <div className="bg-gray-800 p-4 rounded mb-6">
@@ -73,25 +69,18 @@ export default function Crimes({ user, API_URL }) {
                 {crimeList.map((crime) => {
                   const remaining = getCooldown(crime.id, crime.cooldown_seconds);
                   return (
-                    <div
-                      key={crime.id}
-                      className="bg-gray-900 p-4 rounded flex justify-between items-center"
-                    >
+                    <div key={crime.id} className="bg-gray-900 p-4 rounded flex justify-between items-center">
                       <div>
                         <h3 className="text-lg font-semibold">{crime.name}</h3>
                         <p className="text-sm opacity-80">{crime.description}</p>
                         <p className="text-xs opacity-60">
-                          💵 ${crime.min_reward} - ${crime.max_reward} | 🎯{" "}
-                          {Math.round(crime.success_rate * 100)}% | ⏳ {crime.cooldown_seconds}s
+                          💵 ${crime.min_reward} - ${crime.max_reward} | 🎯 {Math.round(crime.success_rate * 100)}% | ⏳ {crime.cooldown_seconds}s
                         </p>
                       </div>
                       {remaining > 0 ? (
                         <span className="text-red-400 text-sm">⏳ {remaining}s</span>
                       ) : (
-                        <button
-                          onClick={() => commitCrime(crime.id)}
-                          className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-                        >
+                        <button onClick={() => commitCrime(crime.id)} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
                           Commit
                         </button>
                       )}
