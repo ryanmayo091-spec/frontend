@@ -4,7 +4,7 @@ import { Sword, Banknote, Lock, Trophy } from "lucide-react";
 export default function Dashboard({ user, setActiveTab }) {
   const points = user.points ?? 0;
 
-  // Define rank ladder
+  // Mafia rank ladder
   const ranks = [
     { name: "Thug", points: 0 },
     { name: "Associate", points: 100 },
@@ -15,13 +15,11 @@ export default function Dashboard({ user, setActiveTab }) {
     { name: "Boss", points: 2000 },
   ];
 
-  // Get current + next rank
   const currentRank =
     [...ranks].reverse().find((r) => points >= r.points) || ranks[0];
   const nextRank =
     ranks.find((r) => r.points > currentRank.points) || currentRank;
 
-  // Progress %
   const progress =
     nextRank && nextRank.points > currentRank.points
       ? ((points - currentRank.points) /
@@ -39,7 +37,7 @@ export default function Dashboard({ user, setActiveTab }) {
         The streets whisper your name. Manage your empire, grow your fortune, and rise in the underworld.
       </p>
 
-      {/* Main stats grid */}
+      {/* Stats */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
           icon={<Banknote className="text-green-400" />}
@@ -49,13 +47,13 @@ export default function Dashboard({ user, setActiveTab }) {
         />
         <StatCard
           icon={<Sword className="text-red-400" />}
-          title="Crimes Attempted"
+          title="Crimes"
           value={user.total_crimes ?? 0}
-          subtitle={`${user.successful_crimes ?? 0} successful, ${user.unsuccessful_crimes ?? 0} failed`}
+          subtitle={`${user.successful_crimes ?? 0} success • ${user.unsuccessful_crimes ?? 0} fails`}
         />
         <StatCard
           icon={<Lock className="text-yellow-400" />}
-          title="Prison Status"
+          title="Prison"
           value={
             user.jail_until && new Date(user.jail_until) > new Date()
               ? "🚔 In Jail"
@@ -63,26 +61,24 @@ export default function Dashboard({ user, setActiveTab }) {
           }
           subtitle={
             user.jail_until && new Date(user.jail_until) > new Date()
-              ? `Released at ${new Date(
-                  user.jail_until
-                ).toLocaleTimeString()}`
-              : "Keep your head low... for now"
+              ? `Release: ${new Date(user.jail_until).toLocaleTimeString()}`
+              : "Keep your head low..."
           }
         />
         <StatCard
           icon={<Trophy className="text-blue-400" />}
           title="Rank"
           value={currentRank.name}
-          subtitle={`${points} pts • Next: ${nextRank.name}`}
+          subtitle={`${points} pts → Next: ${nextRank.name}`}
         />
       </div>
 
-      {/* Rank Progress Bar */}
+      {/* Progress */}
       <div className="bg-gray-800 p-4 rounded-lg shadow mb-8">
         <h2 className="text-xl font-semibold mb-2">Progress to Next Rank</h2>
         <div className="w-full bg-gray-700 rounded h-4">
           <div
-            className="bg-green-500 h-4 rounded"
+            className="bg-green-500 h-4 rounded transition-all duration-700"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
@@ -91,58 +87,59 @@ export default function Dashboard({ user, setActiveTab }) {
         </p>
       </div>
 
-      {/* Quick actions */}
+      {/* Quick Actions */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <button
+        <ActionCard
+          label="💀 Crimes"
+          desc="The streets are calling. Risk it all for cash and power."
           onClick={() => setActiveTab("crimes")}
-          className="bg-red-600 hover:bg-red-700 p-4 rounded-lg text-left shadow"
-        >
-          <h3 className="text-xl font-bold">💀 Crimes</h3>
-          <p className="text-sm opacity-80">
-            Hit the streets and take risks for cash and reputation.
-          </p>
-        </button>
-
-        <button
+          color="red"
+        />
+        <ActionCard
+          label="🏦 Bank"
+          desc="Wash your money clean. Bigger stash, lower risk."
           onClick={() => setActiveTab("bank")}
-          className="bg-green-600 hover:bg-green-700 p-4 rounded-lg text-left shadow"
-        >
-          <h3 className="text-xl font-bold">🏦 Bank</h3>
-          <p className="text-sm opacity-80">
-            Launder your dirty money and keep it safe.
-          </p>
-        </button>
-
-        <button
+          color="green"
+        />
+        <ActionCard
+          label="🚗 Garage"
+          desc="Park your rides. Only the best for a mafia boss."
           onClick={() => setActiveTab("garage")}
-          className="bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-left shadow"
-        >
-          <h3 className="text-xl font-bold">🚗 Garage</h3>
-          <p className="text-sm opacity-80">
-            Manage your cars and flex your mafia lifestyle.
-          </p>
-        </button>
-
-        <button
+          color="blue"
+        />
+        <ActionCard
+          label="🚔 Prison"
+          desc="See who’s locked up… or plan a bust-out."
           onClick={() => setActiveTab("prison")}
-          className="bg-yellow-600 hover:bg-yellow-700 p-4 rounded-lg text-left shadow"
-        >
-          <h3 className="text-xl font-bold">🚔 Prison</h3>
-          <p className="text-sm opacity-80">
-            See who’s locked up… maybe help with a bust.
-          </p>
-        </button>
-
-        <button
+          color="yellow"
+        />
+        <ActionCard
+          label="🏆 Rankings"
+          desc="Who rules the city? Check the leaderboard."
           onClick={() => setActiveTab("rankings")}
-          className="bg-purple-600 hover:bg-purple-700 p-4 rounded-lg text-left shadow"
-        >
-          <h3 className="text-xl font-bold">🏆 Rankings</h3>
-          <p className="text-sm opacity-80">
-            Check the leaderboard and see who rules the city.
-          </p>
-        </button>
+          color="purple"
+        />
       </div>
     </div>
+  );
+}
+
+function ActionCard({ label, desc, onClick, color }) {
+  const colorClass = {
+    red: "bg-red-700 hover:bg-red-800",
+    green: "bg-green-700 hover:bg-green-800",
+    blue: "bg-blue-700 hover:bg-blue-800",
+    yellow: "bg-yellow-700 hover:bg-yellow-800",
+    purple: "bg-purple-700 hover:bg-purple-800",
+  }[color];
+
+  return (
+    <button
+      onClick={onClick}
+      className={`${colorClass} p-4 rounded-lg text-left shadow transition-all duration-300 transform hover:scale-105`}
+    >
+      <h3 className="text-xl font-bold">{label}</h3>
+      <p className="text-sm opacity-80">{desc}</p>
+    </button>
   );
 }
