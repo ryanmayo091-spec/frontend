@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Crimes({ user, API_URL }) {
   const [crimes, setCrimes] = useState({});
   const [crimeLog, setCrimeLog] = useState([]);
+  const [openCategories, setOpenCategories] = useState({});
 
-  // Fetch crimes grouped by category
   useEffect(() => {
     fetch(`${API_URL}/crimes`)
       .then((res) => res.json())
@@ -38,44 +39,68 @@ export default function Crimes({ user, API_URL }) {
     return new Date(last).getTime() + crime.cooldown_seconds * 1000;
   }
 
+  function toggleCategory(cat) {
+    setOpenCategories((prev) => ({
+      ...prev,
+      [cat]: !prev[cat],
+    }));
+  }
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">💀 Crimes</h1>
       <p className="mb-6 opacity-80">
-        Petty theft or high-stakes heists — every choice builds your reputation. Fail, and prison awaits.
+        From petty thefts to daring heists, every choice builds your reputation. Fail, and prison awaits.
       </p>
 
       {Object.keys(crimes).map((category) => (
-        <div key={category} className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 text-green-400">{category} Crimes</h2>
-          <div className="space-y-4">
-            {crimes[category].map((crime) => {
-              const cooldownEnd = getCooldownEnd(crime);
-              const remaining = Math.max(0, Math.ceil((cooldownEnd - Date.now()) / 1000));
+        <div key={category} className="mb-6">
+          <button
+            onClick={() => toggleCategory(category)}
+            className="w-full text-left bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded flex justify-between items-center"
+          >
+            <span className="text-xl font-semibold">{category} Crimes</span>
+            <span>{openCategories[category] ? "▲" : "▼"}</span>
+          </button>
 
-              return (
-                <div key={crime.id} className="bg-gray-800 p-4 rounded shadow space-y-2">
-                  <div>
-                    <h3 className="text-xl font-semibold">{crime.name}</h3>
-                    <p className="text-sm opacity-80">{crime.description}</p>
-                    <p className="text-sm opacity-70 mt-1">
-                      💵 ${crime.min_reward} - ${crime.max_reward} | 🎯 {Math.round(crime.success_rate * 100)}% success | ⏳ {crime.cooldown_seconds}s cooldown
-                    </p>
-                  </div>
-                  {remaining > 0 ? (
-                    <span className="text-red-400 text-sm">⏳ {remaining}s cooldown</span>
-                  ) : (
-                    <button
-                      onClick={() => commitCrime(crime.id)}
-                      className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-                    >
-                      Commit Crime
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <AnimatePresence>
+            {openCategories[category] && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mt-4 space-y-4 overflow-hidden"
+              >
+                {crimes[category].map((crime) => {
+                  const cooldownEnd = getCooldownEnd(crime);
+                  const remaining = Math.max(0, Math.ceil((cooldownEnd - Date.now()) / 1000));
+
+                  return (
+                    <div key={crime.id} className="bg-gray-800 p-4 rounded shadow space-y-2">
+                      <div>
+                        <h3 className="text-xl font-semibold">{crime.name}</h3>
+                        <p className="text-sm opacity-80">{crime.description}</p>
+                        <p className="text-sm opacity-70 mt-1">
+                          💵 ${crime.min_reward} - ${crime.max_reward} | 🎯 {Math.round(crime.success_rate * 100)}% success | ⏳ {crime.cooldown_seconds}s cooldown
+                        </p>
+                      </div>
+                      {remaining > 0 ? (
+                        <span className="text-red-400 text-sm">⏳ {remaining}s cooldown</span>
+                      ) : (
+                        <button
+                          onClick={() => commitCrime(crime.id)}
+                          className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+                        >
+                          Commit Crime
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       ))}
 
