@@ -172,8 +172,22 @@ export default function App() {
     alert("Factory updated"); loadEconomy();
   }
 
-  // --- UI ---
-  if (!user) { /* login/register UI (same as before) */ }
+  // --- UI (Login/Register) ---
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <div className="bg-gray-800 p-6 rounded-lg w-80">
+          <h1 className="text-2xl font-bold mb-4 text-center">Mafia Game</h1>
+          <form onSubmit={login} className="flex flex-col gap-2">
+            <input className="p-2 rounded text-black" placeholder="Username" value={username} onChange={(e)=>setUsername(e.target.value)} />
+            <input type="password" className="p-2 rounded text-black" placeholder="Password" value={password} onChange={(e)=>setPassword(e.target.value)} />
+            <button className="bg-green-600 hover:bg-green-700 p-2 rounded">Login</button>
+          </form>
+          <button onClick={register} className="mt-3 text-sm underline block mx-auto hover:text-green-400">Or Register</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
@@ -202,6 +216,7 @@ export default function App() {
       {/* Main */}
       <main className="flex-1 p-6 overflow-y-auto">
         {activeTab === "home" && <StoryCard title="Home" text="Welcome to the underworld. Here you’ll see your empire." />}
+        
         {activeTab === "crimes" && (
           <div>
             <StoryCard title="Crimes" text="Commit crimes to earn money and respect." />
@@ -213,11 +228,62 @@ export default function App() {
             ))}
           </div>
         )}
-        {activeTab === "bank" && (/* Bank UI with StoryCard */)}
-        {activeTab === "garage" && (/* Garage UI with StoryCard */)}
-        {activeTab === "properties" && (/* Properties UI with StoryCard */)}
-        {activeTab === "blackmarket" && (/* Black Market UI with StoryCard */)}
-        {activeTab === "casino" && (/* Casino UI with StoryCard */)}
+
+        {activeTab === "bank" && (
+          <div>
+            <StoryCard title="Bank" text="Deposit your dirty cash here. Withdraw when needed." />
+            <p>Cash: ${user.money} | Bank: ${user.bank_balance}</p>
+            <input type="number" value={amount} onChange={(e)=>setAmount(e.target.value)} placeholder="Amount" className="p-2 rounded text-black mr-2" />
+            <button onClick={deposit} className="bg-green-600 px-3 py-1 rounded mr-2">Deposit</button>
+            <button onClick={withdraw} className="bg-blue-600 px-3 py-1 rounded">Withdraw</button>
+          </div>
+        )}
+
+        {activeTab === "garage" && (
+          <div>
+            <StoryCard title="Garage" text="Your cars are status symbols. Collect, buy, and sell them." />
+            {cars.map(car => (
+              <div key={car.id} className="bg-gray-800 p-2 my-2 rounded flex justify-between">
+                <span>{car.model}</span>
+                <button onClick={()=>sellCar(car.id)} className="bg-red-600 px-2 py-1 rounded">Sell</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === "properties" && (
+          <div>
+            <StoryCard title="Properties" text="Factories, casinos, and nightclubs are the real power. Own them to control the streets." />
+            {properties.map(p => (
+              <div key={p.id} className="bg-gray-800 p-2 mb-2 rounded">
+                <p>{p.name} - Owner: {p.owner_id || "State"} | Price: ${p.custom_price || p.base_price}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === "blackmarket" && (
+          <div>
+            <StoryCard title="Black Market" text="The underground marketplace. Buy weapons, goods, and contraband." />
+            {blackMarket.map(item => (
+              <div key={item.id} className="bg-gray-800 p-2 mb-2 rounded flex justify-between">
+                <span>{item.name} - ${item.price}</span>
+                <button onClick={()=>buyItem(item.id)} className="bg-blue-600 px-2 py-1 rounded">Buy</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === "casino" && (
+          <div>
+            <StoryCard title="Casino" text="Welcome to the high-roller’s den. Spin slots or play blackjack — the house always wins." />
+            <button onClick={playSlots} className="bg-purple-600 px-3 py-1 rounded mr-2">Slots ($100)</button>
+            <button onClick={playBlackjack} className="bg-purple-800 px-3 py-1 rounded">Blackjack ($200)</button>
+            {casinoMsg && <p className="mt-3">{casinoMsg}</p>}
+          </div>
+        )}
+
+        {activeTab === "rankings" && <StoryCard title="Rankings" text="See who rules the underworld. Money, crimes, and power decide the top dogs." />}
 
         {activeTab === "admin" && (user.role === "admin" || user.role === "mod") && (
           <div>
