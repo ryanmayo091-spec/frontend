@@ -5,7 +5,7 @@ export default function Crimes({ user, API_URL }) {
   const [openCategory, setOpenCategory] = useState(null);
   const [lastCrimes, setLastCrimes] = useState(user.last_crimes || {});
 
-  // Load crimes from backend
+  // Fetch crimes
   useEffect(() => {
     fetch(`${API_URL}/crimes`)
       .then((res) => res.json())
@@ -13,7 +13,7 @@ export default function Crimes({ user, API_URL }) {
       .catch((err) => console.error("Failed to load crimes", err));
   }, [API_URL]);
 
-  // Commit a crime
+  // Commit crime
   async function commitCrime(crimeId) {
     const res = await fetch(`${API_URL}/commit-crime`, {
       method: "POST",
@@ -22,15 +22,21 @@ export default function Crimes({ user, API_URL }) {
     });
     const data = await res.json();
 
-    alert(data.message);
-
     if (data.user) {
       setLastCrimes(data.user.last_crimes || {});
       localStorage.setItem("user", JSON.stringify(data.user));
     }
+
+    if (data.success) {
+      alert(`✅ Success! You earned $${data.reward}`);
+    } else if (data.jail_until) {
+      alert(`🚔 Failed! You are jailed until ${new Date(data.jail_until).toLocaleTimeString()}`);
+    } else {
+      alert("❌ Failed crime!");
+    }
   }
 
-  // Get cooldown timer
+  // Cooldown helper
   function getCooldown(crimeId, cooldown) {
     if (!lastCrimes || !lastCrimes[crimeId]) return 0;
     const end = new Date(lastCrimes[crimeId]).getTime() + cooldown * 1000;
@@ -49,14 +55,13 @@ export default function Crimes({ user, API_URL }) {
     <div>
       <h1 className="text-3xl font-bold mb-2">Crimes</h1>
       <p className="mb-6 opacity-80">
-        Each crime has its own risks, rewards, and cooldowns. Succeed to gain
-        money and XP, fail and you may end up in prison.
+        Choose your crime wisely. Each has its own risks, rewards, and cooldowns.
       </p>
 
       <div className="space-y-4">
         {Object.entries(grouped).map(([category, crimeList]) => (
           <div key={category} className="bg-gray-800 rounded shadow">
-            {/* Category Toggle */}
+            {/* Category Header */}
             <button
               onClick={() =>
                 setOpenCategory(openCategory === category ? null : category)
@@ -67,7 +72,7 @@ export default function Crimes({ user, API_URL }) {
               <span>{openCategory === category ? "▲" : "▼"}</span>
             </button>
 
-            {/* Crimes inside category */}
+            {/* Crimes inside */}
             {openCategory === category && (
               <div className="p-4 space-y-4">
                 {crimeList.map((crime) => {
@@ -83,7 +88,7 @@ export default function Crimes({ user, API_URL }) {
                         <p className="text-xs opacity-60 flex gap-3 items-center mt-1">
                           <span className="flex items-center gap-1">
                             <img
-                              src="https://i.ibb.co/k53Qd5k/money-bag.png"
+                              src="https://raw.githubusercontent.com/tabler/tabler-icons/master/icons/moneybag.svg"
                               alt="Money"
                               className="w-4 h-4"
                             />
@@ -91,7 +96,7 @@ export default function Crimes({ user, API_URL }) {
                           </span>
                           <span className="flex items-center gap-1">
                             <img
-                              src="https://i.ibb.co/0Y0Y3cs/mafia-hat.png"
+                              src="https://raw.githubusercontent.com/tabler/tabler-icons/master/icons/target.svg"
                               alt="Success"
                               className="w-4 h-4"
                             />
@@ -99,7 +104,7 @@ export default function Crimes({ user, API_URL }) {
                           </span>
                           <span className="flex items-center gap-1">
                             <img
-                              src="https://i.ibb.co/SBSj3tM/prison-bars.png"
+                              src="https://raw.githubusercontent.com/tabler/tabler-icons/master/icons/hourglass.svg"
                               alt="Cooldown"
                               className="w-4 h-4"
                             />
