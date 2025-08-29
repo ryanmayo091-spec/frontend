@@ -132,24 +132,75 @@ export default function App() {
       {/* Main content */}
       <main className="flex-1 p-8">
         {activeTab === "home" && (
-          <SectionCard title="Dashboard" description="Your life in the underworld.">
-            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
-              <StatCard title="Money" value={`$${user.money ?? 0}`} />
-              <StatCard title="Total Crimes" value={user.total_crimes ?? 0} />
-              <StatCard title="Successful" value={user.successful_crimes ?? 0} />
-              <StatCard title="Unsuccessful" value={user.unsuccessful_crimes ?? 0} />
-            </div>
-          </SectionCard>
-        )}
-        {activeTab === "crimes" && <Crimes user={user} API_URL={API_URL} />}
-        {activeTab === "bank" && <Bank user={user} API_URL={API_URL} />}
-        {activeTab === "garage" && <Garage user={user} />}
-        {activeTab === "prison" && <Prison user={user} />}
-        {activeTab === "rankings" && <Rankings />}
-      </main>
+  <SectionCard title="Dashboard" description="Your underworld empire overview.">
+    {/* Player Profile Card */}
+    <div className="bg-gray-800 p-6 rounded-lg shadow-lg flex items-center gap-4 mb-6">
+      <img
+        src="https://cdn-icons-png.flaticon.com/512/809/809052.png"
+        alt="avatar"
+        className="w-16 h-16 rounded-full border-2 border-green-500"
+      />
+      <div>
+        <h2 className="text-xl font-bold">{user.username}</h2>
+        <p className="opacity-80">Rank: {user.rank || "Rookie"} ⭐ {user.xp || 0} XP</p>
+        <p className="text-green-400 font-semibold">💵 ${user.money ?? 0}</p>
+      </div>
     </div>
-  );
-}
+
+    {/* Stats Grid */}
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <StatCard title="💵 Money" value={`$${user.money ?? 0}`} color="green" />
+      <StatCard title="🎯 Success" value={user.successful_crimes ?? 0} color="blue" />
+      <StatCard title="❌ Fails" value={user.unsuccessful_crimes ?? 0} color="red" />
+      <StatCard title="🕵️ Crimes" value={user.total_crimes ?? 0} color="yellow" />
+    </div>
+
+    {/* XP + Rank Progress */}
+    <div className="bg-gray-800 mt-6 p-4 rounded shadow">
+      <h3 className="font-semibold text-lg mb-2">Rank Progress</h3>
+      <p className="mb-2">👤 {user.rank || "Rookie"} — ⭐ {user.xp || 0} XP</p>
+      <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden">
+        <div
+          className="bg-green-500 h-4"
+          style={{ width: `${Math.min(100, (user.xp % 1000) / 10)}%` }}
+        ></div>
+      </div>
+    </div>
+
+    {/* Quick Actions */}
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-6">
+      <button
+        onClick={() => setActiveTab("crimes")}
+        className="bg-blue-600 hover:bg-blue-700 py-3 rounded shadow text-lg font-semibold"
+      >
+        🚨 Commit Crime
+      </button>
+      <button
+        onClick={() => setActiveTab("bank")}
+        className="bg-green-600 hover:bg-green-700 py-3 rounded shadow text-lg font-semibold"
+      >
+        🏦 Bank
+      </button>
+      <button
+        onClick={() => setActiveTab("garage")}
+        className="bg-purple-600 hover:bg-purple-700 py-3 rounded shadow text-lg font-semibold"
+      >
+        🚗 Garage
+      </button>
+    </div>
+
+    {/* Recent Activity */}
+    <div className="bg-gray-800 mt-6 p-4 rounded shadow">
+      <h3 className="font-semibold text-lg mb-3">📜 Recent Activity</h3>
+      <ul className="space-y-2 text-sm">
+        <li className="opacity-80">✅ Robbed a corner store — earned $200</li>
+        <li className="opacity-80">❌ Failed to pickpocket a stranger</li>
+        <li className="opacity-80">✅ Mugged someone — earned $50</li>
+      </ul>
+    </div>
+  </SectionCard>
+)}
+
 
 function TabButton({ icon, label, active, onClick }) {
   return (
@@ -163,3 +214,4 @@ function TabButton({ icon, label, active, onClick }) {
     </button>
   );
 }
+
