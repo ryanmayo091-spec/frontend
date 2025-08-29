@@ -1,17 +1,28 @@
 import { useEffect, useState } from "react";
-import { Home, Sword, Package, Trophy, Car, Banknote, Lock, LogOut } from "lucide-react";
+import {
+  Home,
+  Sword,
+  Package,
+  Trophy,
+  Car,
+  Banknote,
+  Lock,
+  LogOut,
+  Star,
+  DollarSign,
+  TrendingUp,
+} from "lucide-react";
 
-// Pages (all lowercase file names)
+// Pages
 import Crimes from "./pages/crimes";
 import Bank from "./pages/bank";
 import Garage from "./pages/garage";
 import Prison from "./pages/prison";
 import Rankings from "./pages/rankings";
 
-// Components (all lowercase file names)
+// Components
 import SectionCard from "./components/sectioncard";
 import StatCard from "./components/statcard";
-import NavButton from "./components/navbutton";
 
 const API_URL = "https://mafia-game-kxct.onrender.com";
 
@@ -111,12 +122,42 @@ export default function App() {
       <aside className="w-64 bg-gray-800 p-6 flex flex-col shadow-lg">
         <h2 className="text-2xl font-bold mb-8 text-green-400">Mafia Game</h2>
         <nav className="flex flex-col gap-3">
-          <TabButton icon={<Home size={18} />} label="Home" active={activeTab === "home"} onClick={() => setActiveTab("home")} />
-          <TabButton icon={<Sword size={18} />} label="Crimes" active={activeTab === "crimes"} onClick={() => setActiveTab("crimes")} />
-          <TabButton icon={<Banknote size={18} />} label="Bank" active={activeTab === "bank"} onClick={() => setActiveTab("bank")} />
-          <TabButton icon={<Car size={18} />} label="Garage" active={activeTab === "garage"} onClick={() => setActiveTab("garage")} />
-          <TabButton icon={<Lock size={18} />} label="Prison" active={activeTab === "prison"} onClick={() => setActiveTab("prison")} />
-          <TabButton icon={<Trophy size={18} />} label="Rankings" active={activeTab === "rankings"} onClick={() => setActiveTab("rankings")} />
+          <TabButton
+            icon={<Home size={18} />}
+            label="Home"
+            active={activeTab === "home"}
+            onClick={() => setActiveTab("home")}
+          />
+          <TabButton
+            icon={<Sword size={18} />}
+            label="Crimes"
+            active={activeTab === "crimes"}
+            onClick={() => setActiveTab("crimes")}
+          />
+          <TabButton
+            icon={<Banknote size={18} />}
+            label="Bank"
+            active={activeTab === "bank"}
+            onClick={() => setActiveTab("bank")}
+          />
+          <TabButton
+            icon={<Car size={18} />}
+            label="Garage"
+            active={activeTab === "garage"}
+            onClick={() => setActiveTab("garage")}
+          />
+          <TabButton
+            icon={<Lock size={18} />}
+            label="Prison"
+            active={activeTab === "prison"}
+            onClick={() => setActiveTab("prison")}
+          />
+          <TabButton
+            icon={<Trophy size={18} />}
+            label="Rankings"
+            active={activeTab === "rankings"}
+            onClick={() => setActiveTab("rankings")}
+          />
         </nav>
         <div className="mt-auto pt-6 border-t border-gray-700">
           <div className="mb-2 text-sm opacity-80">{user.username}</div>
@@ -132,76 +173,66 @@ export default function App() {
       {/* Main content */}
       <main className="flex-1 p-8">
         {activeTab === "home" && (
-  <SectionCard title="Dashboard" description="Your underworld empire overview.">
-    {/* Player Profile Card */}
-    <div className="bg-gray-800 p-6 rounded-lg shadow-lg flex items-center gap-4 mb-6">
-      <img
-        src="https://cdn-icons-png.flaticon.com/512/809/809052.png"
-        alt="avatar"
-        className="w-16 h-16 rounded-full border-2 border-green-500"
-      />
-      <div>
-        <h2 className="text-xl font-bold">{user.username}</h2>
-        <p className="opacity-80">Rank: {user.rank || "Rookie"} ⭐ {user.xp || 0} XP</p>
-        <p className="text-green-400 font-semibold">💵 ${user.money ?? 0}</p>
-      </div>
+          <div className="space-y-8">
+            {/* Profile Overview */}
+            <SectionCard
+              title="Your Underworld Profile"
+              description="Keep track of your rise through the ranks."
+            >
+              <div className="flex items-center gap-6">
+                <div className="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center text-2xl font-bold">
+                  {user.username[0].toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">{user.username}</h2>
+                  <p className="opacity-75">Rank: {user.rank || "Street Thug"}</p>
+                  <div className="w-48 bg-gray-700 rounded-full h-3 mt-2">
+                    <div
+                      className="bg-green-500 h-3 rounded-full"
+                      style={{ width: `${user.xp ? (user.xp % 100) : 0}%` }}
+                    />
+                  </div>
+                  <p className="text-xs mt-1 opacity-70">{user.xp || 0} XP</p>
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* Stats Grid */}
+            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+              <StatCard
+                title="Money"
+                value={`$${user.money ?? 0}`}
+                icon={<DollarSign />}
+              />
+              <StatCard
+                title="Total Crimes"
+                value={user.total_crimes ?? 0}
+                icon={<Sword />}
+              />
+              <StatCard
+                title="Successful"
+                value={user.successful_crimes ?? 0}
+                icon={<TrendingUp />}
+              />
+              <StatCard
+                title="Unsuccessful"
+                value={user.unsuccessful_crimes ?? 0}
+                icon={<Lock />}
+              />
+            </div>
+          </div>
+        )}
+        {activeTab === "crimes" && <Crimes user={user} API_URL={API_URL} />}
+        {activeTab === "bank" && <Bank user={user} API_URL={API_URL} />}
+        {activeTab === "garage" && <Garage user={user} />}
+        {activeTab === "prison" && <Prison user={user} />}
+        {activeTab === "rankings" && <Rankings />}
+      </main>
     </div>
+  );
+}
 
-    {/* Stats Grid */}
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard title="💵 Money" value={`$${user.money ?? 0}`} color="green" />
-      <StatCard title="🎯 Success" value={user.successful_crimes ?? 0} color="blue" />
-      <StatCard title="❌ Fails" value={user.unsuccessful_crimes ?? 0} color="red" />
-      <StatCard title="🕵️ Crimes" value={user.total_crimes ?? 0} color="yellow" />
-    </div>
-
-    {/* XP + Rank Progress */}
-    <div className="bg-gray-800 mt-6 p-4 rounded shadow">
-      <h3 className="font-semibold text-lg mb-2">Rank Progress</h3>
-      <p className="mb-2">👤 {user.rank || "Rookie"} — ⭐ {user.xp || 0} XP</p>
-      <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden">
-        <div
-          className="bg-green-500 h-4"
-          style={{ width: `${Math.min(100, (user.xp % 1000) / 10)}%` }}
-        ></div>
-      </div>
-    </div>
-
-    {/* Quick Actions */}
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-6">
-      <button
-        onClick={() => setActiveTab("crimes")}
-        className="bg-blue-600 hover:bg-blue-700 py-3 rounded shadow text-lg font-semibold"
-      >
-        🚨 Commit Crime
-      </button>
-      <button
-        onClick={() => setActiveTab("bank")}
-        className="bg-green-600 hover:bg-green-700 py-3 rounded shadow text-lg font-semibold"
-      >
-        🏦 Bank
-      </button>
-      <button
-        onClick={() => setActiveTab("garage")}
-        className="bg-purple-600 hover:bg-purple-700 py-3 rounded shadow text-lg font-semibold"
-      >
-        🚗 Garage
-      </button>
-    </div>
-
-    {/* Recent Activity */}
-    <div className="bg-gray-800 mt-6 p-4 rounded shadow">
-      <h3 className="font-semibold text-lg mb-3">📜 Recent Activity</h3>
-      <ul className="space-y-2 text-sm">
-        <li className="opacity-80">✅ Robbed a corner store — earned $200</li>
-        <li className="opacity-80">❌ Failed to pickpocket a stranger</li>
-        <li className="opacity-80">✅ Mugged someone — earned $50</li>
-      </ul>
-    </div>
-  </SectionCard>
-)}
-
-
+// Sidebar Tab Button
 function TabButton({ icon, label, active, onClick }) {
   return (
     <button
@@ -214,4 +245,3 @@ function TabButton({ icon, label, active, onClick }) {
     </button>
   );
 }
-
