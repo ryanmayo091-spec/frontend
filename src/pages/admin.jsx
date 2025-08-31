@@ -1,92 +1,118 @@
 import { useEffect, useState } from "react";
-import { Home, Sword, Package, Trophy, Car, Banknote, Lock, LogOut, Shield } from "lucide-react";
 
-// Pages
-import Crimes from "./pages/crimes";
-import Bank from "./pages/bank";
-import Garage from "./pages/garage";
-import Prison from "./pages/prison";
-import Rankings from "./pages/rankings";
-import Admin from "./pages/admin";   // ✅ must be here at the top
+import Crimes from "./crimes";   // ✅ fixed
+import Bank from "./bank";       // ✅ fixed
+import Garage from "./garage";   // ✅ fixed
+import Prison from "./prison";   // ✅ fixed
+import Rankings from "./rankings"; // ✅ fixed
 
-// Components
-import SectionCard from "./components/sectioncard";
-import StatCard from "./components/statcard";
-import NavButton from "./components/navbutton";
+export default function Admin({ user, API_URL }) {
+  const [users, setUsers] = useState([]);
+  const [crimes, setCrimes] = useState([]);
+  const [targetUser, setTargetUser] = useState(null);
+  const [amount, setAmount] = useState(0);
 
-const API_URL = "https://mafia-game-kxct.onrender.com";
+  // Fetch users + crimes
+  useEffect(() => {
+    fetch(`${API_URL}/admin/users`)
+      .then((res) => res.json())
+      .then(setUsers)
+      .catch((err) => console.error("Failed to load users", err));
 
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [activeTab, setActiveTab] = useState("home");
+    fetch(`${API_URL}/admin/crimes`)
+      .then((res) => res.json())
+      .then(setCrimes)
+      .catch((err) => console.error("Failed to load crimes", err));
+  }, [API_URL]);
 
-  // ... your existing code ...
+  async function giveMoney() {
+    const res = await fetch(`${API_URL}/admin/give-money`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, targetId: targetUser, amount }),
+    });
+    const data = await res.json();
+    alert(data.message || "Action complete");
+  }
+
+  async function jailUser(minutes) {
+    const res = await fetch(`${API_URL}/admin/jail-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, targetId: targetUser, minutes }),
+    });
+    const data = await res.json();
+    alert(data.message || "User jailed");
+  }
+
+  async function releaseUser() {
+    const res = await fetch(`${API_URL}/admin/release-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, targetId: targetUser }),
+    });
+    const data = await res.json();
+    alert(data.message || "User released");
+  }
 
   return (
-    <div className="flex min-h-screen bg-gray-900 text-white">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-800 p-6 flex flex-col shadow-lg">
-        <h2 className="text-2xl font-bold mb-8 text-green-400">Mafia Game</h2>
-        <nav className="flex flex-col gap-3">
-          <TabButton icon={<Home size={18} />} label="Home" active={activeTab === "home"} onClick={() => setActiveTab("home")} />
-          <TabButton icon={<Sword size={18} />} label="Crimes" active={activeTab === "crimes"} onClick={() => setActiveTab("crimes")} />
-          <TabButton icon={<Banknote size={18} />} label="Bank" active={activeTab === "bank"} onClick={() => setActiveTab("bank")} />
-          <TabButton icon={<Car size={18} />} label="Garage" active={activeTab === "garage"} onClick={() => setActiveTab("garage")} />
-          <TabButton icon={<Lock size={18} />} label="Prison" active={activeTab === "prison"} onClick={() => setActiveTab("prison")} />
-          <TabButton icon={<Trophy size={18} />} label="Rankings" active={activeTab === "rankings"} onClick={() => setActiveTab("rankings")} />
+    <div>
+      <h1 className="text-3xl font-bold mb-6">Admin Control Panel</h1>
+      <p className="opacity-80 mb-6">
+        Manage users, crimes, and the economy. Only admins can see this tab.
+      </p>
 
-          {/* ✅ Only show Admin tab if user is admin or mod */}
-          {(user?.role === "admin" || user?.role === "mod") && (
-            <TabButton icon={<Shield size={18} />} label="Admin" active={activeTab === "admin"} onClick={() => setActiveTab("admin")} />
-          )}
-        </nav>
+      {/* User Management */}
+      <div className="bg-gray-800 p-4 rounded mb-6">
+        <h2 className="text-xl font-semibold mb-4">User Management</h2>
+        <select
+          value={targetUser || ""}
+          onChange={(e) => setTargetUser(e.target.value)}
+          className="w-full p-2 rounded text-black mb-4"
+        >
+          <option value="">Select a user</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.username} ({u.role})
+            </option>
+          ))}
+        </select>
 
-        <div className="mt-auto pt-6 border-t border-gray-700">
-          <div className="mb-2 text-sm opacity-80">{user.username}</div>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 w-full bg-red-600 hover:bg-red-700 p-2 rounded justify-center"
-          >
-            <LogOut size={16} /> Logout
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(Number(e.target.value))}
+          placeholder="Amount"
+          className="w-full p-2 rounded text-black mb-3"
+        />
+
+        <div className="flex gap-3">
+          <button onClick={giveMoney} className="bg-green-600 px-4 py-2 rounded">
+            Give Money
+          </button>
+          <button onClick={() => jailUser(10)} className="bg-red-600 px-4 py-2 rounded">
+            Jail 10m
+          </button>
+          <button onClick={releaseUser} className="bg-yellow-600 px-4 py-2 rounded">
+            Release
           </button>
         </div>
-      </aside>
+      </div>
 
-      {/* Main content */}
-      <main className="flex-1 p-8">
-        {activeTab === "home" && (
-          <SectionCard title="Dashboard" description="Your life in the underworld.">
-            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
-              <StatCard title="Money" value={`$${user.money ?? 0}`} />
-              <StatCard title="Total Crimes" value={user.total_crimes ?? 0} />
-              <StatCard title="Successful" value={user.successful_crimes ?? 0} />
-              <StatCard title="Unsuccessful" value={user.unsuccessful_crimes ?? 0} />
-            </div>
-          </SectionCard>
-        )}
-        {activeTab === "crimes" && <Crimes user={user} API_URL={API_URL} />}
-        {activeTab === "bank" && <Bank user={user} API_URL={API_URL} />}
-        {activeTab === "garage" && <Garage user={user} />}
-        {activeTab === "prison" && <Prison user={user} />}
-        {activeTab === "rankings" && <Rankings />}
-        {activeTab === "admin" && <Admin user={user} API_URL={API_URL} />} {/* ✅ Admin panel here */}
-      </main>
+      {/* Crimes Management */}
+      <div className="bg-gray-800 p-4 rounded">
+        <h2 className="text-xl font-semibold mb-4">Crimes Management</h2>
+        {crimes.map((crime) => (
+          <div key={crime.id} className="mb-3">
+            <p>
+              <span className="font-semibold">{crime.name}</span> – Reward $
+              {crime.min_reward}-{crime.max_reward}, Success{" "}
+              {Math.round(crime.success_rate * 100)}%, Cooldown{" "}
+              {crime.cooldown_seconds}s
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
-
-function TabButton({ icon, label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 rounded font-medium transition-colors ${
-        active ? "bg-gray-700 text-green-400" : "hover:bg-gray-700"
-      }`}
-    >
-      {icon} {label}
-    </button>
-  );
-}
-
