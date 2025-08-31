@@ -243,5 +243,20 @@ function TabButton({ icon, label, active, onClick }) {
     >
       {icon} {label}
     </button>
+
+    // add import
+import Admin from "./pages/admin";
+
+// ...inside the sidebar nav
+{(user.role === "admin" || user.role === "mod") && (
+  <TabButton icon={<Trophy size={18} />} label="Admin" active={activeTab === "admin"} onClick={() => setActiveTab("admin")} />
+)}
+
+// ...inside <main>
+{activeTab === "admin" && (user.role === "admin" || user.role === "mod") && (
+  <Admin user={user} API_URL={API_URL} />
+)}
+
   );
 }
+
