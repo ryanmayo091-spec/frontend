@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 
 export default function Crimes({ user, API_URL }) {
   const [crimes, setCrimes] = useState([]);
-  const [openCategory, setOpenCategory] = useState(null);
-  const [lastCrimes, setLastCrimes] = useState(user.last_crimes || {});
 
   // Fetch crimes
   useEffect(() => {
@@ -22,118 +20,87 @@ export default function Crimes({ user, API_URL }) {
     });
     const data = await res.json();
 
-    if (data.user) {
-      setLastCrimes(data.user.last_crimes || {});
-      localStorage.setItem("user", JSON.stringify(data.user));
-    }
-
     if (data.success) {
       alert(`✅ Success! You earned $${data.reward}`);
     } else if (data.jail_until) {
-      alert(`🚔 Failed! You are jailed until ${new Date(data.jail_until).toLocaleTimeString()}`);
+      alert(`🚔 You got caught! In jail until ${new Date(data.jail_until).toLocaleTimeString()}`);
     } else {
-      alert("❌ Failed crime!");
+      alert(data.message || "❌ Failed crime!");
     }
   }
 
-  // Cooldown helper
-  function getCooldown(crimeId, cooldown) {
-    if (!lastCrimes || !lastCrimes[crimeId]) return 0;
-    const end = new Date(lastCrimes[crimeId]).getTime() + cooldown * 1000;
-    return Math.max(0, Math.ceil((end - Date.now()) / 1000));
+  // Helper: cooldown
+  function getCooldownEnd(crime) {
+    if (!user.last_crimes) return 0;
+    const last = user.last_crimes[crime.id];
+    if (!last) return 0;
+    return new Date(last).getTime() + crime.cooldown_seconds * 1000;
   }
 
   // Group crimes by category
   const grouped = crimes.reduce((acc, crime) => {
-    const category = crime.category || "Miscellaneous";
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(crime);
+    acc[crime.category] = acc[crime.category] || [];
+    acc[crime.category].push(crime);
     return acc;
   }, {});
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-2">Crimes</h1>
+      <h1 className="text-3xl font-bold mb-6">💀 Crimes</h1>
       <p className="mb-6 opacity-80">
-        Choose your crime wisely. Each has its own risks, rewards, and cooldowns.
+        Crimes are your path to fortune and fear. Each one has its own story, reward,
+        and risk. Fail, and you may end up behind bars.
       </p>
 
-      <div className="space-y-4">
-        {Object.entries(grouped).map(([category, crimeList]) => (
-          <div key={category} className="bg-gray-800 rounded shadow">
-            {/* Category Header */}
-            <button
-              onClick={() =>
-                setOpenCategory(openCategory === category ? null : category)
-              }
-              className="w-full flex justify-between items-center px-4 py-3 font-semibold text-left text-green-400 hover:bg-gray-700 rounded"
-            >
-              {category}
-              <span>{openCategory === category ? "▲" : "▼"}</span>
-            </button>
+      {Object.entries(grouped).map(([category, crimes]) => (
+        <div key={category} className="mb-8">
+          <h2 className="text-2xl font-bold mb-4 text-green-400">{category} Crimes</h2>
+          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+            {crimes.map((crime) => {
+              const cooldownEnd = getCooldownEnd(crime);
+              const remaining = Math.max(0, Math.ceil((cooldownEnd - Date.now()) / 1000));
 
-            {/* Crimes inside */}
-            {openCategory === category && (
-              <div className="p-4 space-y-4">
-                {crimeList.map((crime) => {
-                  const remaining = getCooldown(crime.id, crime.cooldown_seconds);
-                  return (
-                    <div
-                      key={crime.id}
-                      className="bg-gray-900 p-4 rounded flex justify-between items-center"
-                    >
-                      <div>
-                        <h3 className="text-lg font-semibold">{crime.name}</h3>
-                        <p className="text-sm opacity-80">{crime.description}</p>
-                        <p className="text-xs opacity-60 flex gap-3 items-center mt-1">
-                          <span className="flex items-center gap-1">
-                            <img
-                              src="https://raw.githubusercontent.com/tabler/tabler-icons/master/icons/moneybag.svg"
-                              alt="Money"
-                              className="w-4 h-4"
-                            />
-                            ${crime.min_reward} - ${crime.max_reward}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <img
-                              src="https://raw.githubusercontent.com/tabler/tabler-icons/master/icons/target.svg"
-                              alt="Success"
-                              className="w-4 h-4"
-                            />
-                            {Math.round(crime.success_rate * 100)}%
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <img
-                              src="https://raw.githubusercontent.com/tabler/tabler-icons/master/icons/hourglass.svg"
-                              alt="Cooldown"
-                              className="w-4 h-4"
-                            />
-                            {crime.cooldown_seconds}s
-                          </span>
-                        </p>
-                      </div>
-
-                      {/* Button or cooldown */}
-                      {remaining > 0 ? (
-                        <span className="text-red-400 text-sm">
-                          Cooling down: {remaining}s
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => commitCrime(crime.id)}
-                          className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-                        >
-                          Commit
-                        </button>
-                      )}
+              return (
+                <div
+                  key={crime.id}
+                  className="bg-gray-800 rounded-xl shadow overflow-hidden flex flex-col"
+                >
+                  <div
+                    className="h-32 bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url('https://source.unsplash.com/600x400/?mafia,crime,${crime.category}')`,
+                    }}
+                  ></div>
+                  <div className="p-4 flex flex-col flex-grow justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold mb-1">{crime.name}</h3>
+                      <p className="text-sm opacity-70 mb-2">{crime.description}</p>
+                      <p className="text-sm opacity-80">
+                        💵 ${crime.min_reward} - ${crime.max_reward} | 🎯 {Math.round(crime.success_rate * 100)}% | ⏳ {crime.cooldown_seconds}s
+                      </p>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    {remaining > 0 ? (
+                      <button
+                        disabled
+                        className="bg-gray-700 text-gray-400 mt-3 p-2 rounded"
+                      >
+                        Cooling down: {remaining}s
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => commitCrime(crime.id)}
+                        className="bg-blue-600 hover:bg-blue-700 mt-3 p-2 rounded font-semibold"
+                      >
+                        Commit
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }
