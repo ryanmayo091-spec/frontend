@@ -1,118 +1,207 @@
 import { useEffect, useState } from "react";
 
-import Crimes from "./crimes";   // ✅ fixed
-import Bank from "./bank";       // ✅ fixed
-import Garage from "./garage";   // ✅ fixed
-import Prison from "./prison";   // ✅ fixed
-import Rankings from "./rankings"; // ✅ fixed
-
 export default function Admin({ user, API_URL }) {
   const [users, setUsers] = useState([]);
   const [crimes, setCrimes] = useState([]);
-  const [targetUser, setTargetUser] = useState(null);
-  const [amount, setAmount] = useState(0);
+  const [targetUser, setTargetUser] = useState("");
+  const [amount, setAmount] = useState("");
+  const [role, setRole] = useState("player");
+  const [tab, setTab] = useState("users");
 
   // Fetch users + crimes
   useEffect(() => {
     fetch(`${API_URL}/admin/users`)
-      .then((res) => res.json())
+      .then(r => r.json())
       .then(setUsers)
-      .catch((err) => console.error("Failed to load users", err));
+      .catch(console.error);
 
     fetch(`${API_URL}/admin/crimes`)
-      .then((res) => res.json())
+      .then(r => r.json())
       .then(setCrimes)
-      .catch((err) => console.error("Failed to load crimes", err));
+      .catch(console.error);
   }, [API_URL]);
 
+  // === Actions ===
   async function giveMoney() {
+    if (!targetUser) return alert("Select a user first!");
     const res = await fetch(`${API_URL}/admin/give-money`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, targetId: targetUser, amount }),
+      body: JSON.stringify({
+        userId: user.id,
+        targetId: targetUser,
+        amount: Number(amount),
+      }),
     });
-    const data = await res.json();
-    alert(data.message || "Action complete");
+    alert((await res.json()).message);
   }
 
   async function jailUser(minutes) {
+    if (!targetUser) return alert("Select a user first!");
     const res = await fetch(`${API_URL}/admin/jail-user`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user.id, targetId: targetUser, minutes }),
     });
-    const data = await res.json();
-    alert(data.message || "User jailed");
+    alert((await res.json()).message);
   }
 
   async function releaseUser() {
+    if (!targetUser) return alert("Select a user first!");
     const res = await fetch(`${API_URL}/admin/release-user`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user.id, targetId: targetUser }),
     });
-    const data = await res.json();
-    alert(data.message || "User released");
+    alert((await res.json()).message);
+  }
+
+  async function updateRole() {
+    if (!targetUser) return alert("Select a user first!");
+    const res = await fetch(`${API_URL}/admin/set-role`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, targetId: targetUser, role }),
+    });
+    alert((await res.json()).message);
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Admin Control Panel</h1>
-      <p className="opacity-80 mb-6">
-        Manage users, crimes, and the economy. Only admins can see this tab.
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">⚙️ Admin Control Panel</h1>
+      <p className="opacity-80">
+        Manage players, crimes, and the economy. Only admins and mods have
+        access.
       </p>
 
-      {/* User Management */}
-      <div className="bg-gray-800 p-4 rounded mb-6">
-        <h2 className="text-xl font-semibold mb-4">User Management</h2>
-        <select
-          value={targetUser || ""}
-          onChange={(e) => setTargetUser(e.target.value)}
-          className="w-full p-2 rounded text-black mb-4"
+      {/* Tabs */}
+      <div className="flex gap-3">
+        <button
+          onClick={() => setTab("users")}
+          className={`px-3 py-1 rounded ${
+            tab === "users" ? "bg-green-600" : "bg-gray-700"
+          }`}
         >
-          <option value="">Select a user</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.username} ({u.role})
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(Number(e.target.value))}
-          placeholder="Amount"
-          className="w-full p-2 rounded text-black mb-3"
-        />
-
-        <div className="flex gap-3">
-          <button onClick={giveMoney} className="bg-green-600 px-4 py-2 rounded">
-            Give Money
-          </button>
-          <button onClick={() => jailUser(10)} className="bg-red-600 px-4 py-2 rounded">
-            Jail 10m
-          </button>
-          <button onClick={releaseUser} className="bg-yellow-600 px-4 py-2 rounded">
-            Release
-          </button>
-        </div>
+          Users
+        </button>
+        <button
+          onClick={() => setTab("crimes")}
+          className={`px-3 py-1 rounded ${
+            tab === "crimes" ? "bg-green-600" : "bg-gray-700"
+          }`}
+        >
+          Crimes
+        </button>
+        <button
+          onClick={() => setTab("economy")}
+          className={`px-3 py-1 rounded ${
+            tab === "economy" ? "bg-green-600" : "bg-gray-700"
+          }`}
+        >
+          Economy
+        </button>
       </div>
 
-      {/* Crimes Management */}
-      <div className="bg-gray-800 p-4 rounded">
-        <h2 className="text-xl font-semibold mb-4">Crimes Management</h2>
-        {crimes.map((crime) => (
-          <div key={crime.id} className="mb-3">
-            <p>
-              <span className="font-semibold">{crime.name}</span> – Reward $
-              {crime.min_reward}-{crime.max_reward}, Success{" "}
-              {Math.round(crime.success_rate * 100)}%, Cooldown{" "}
-              {crime.cooldown_seconds}s
-            </p>
+      {/* USERS TAB */}
+      {tab === "users" && (
+        <div className="bg-gray-800 p-4 rounded shadow space-y-4">
+          <h2 className="text-lg font-semibold mb-2">Manage Users</h2>
+
+          <select
+            value={targetUser}
+            onChange={(e) => setTargetUser(e.target.value)}
+            className="w-full p-2 rounded text-black"
+          >
+            <option value="">Select a user</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.username} ({u.role}) — 💵 {u.money}
+              </option>
+            ))}
+          </select>
+
+          {/* Money Controls */}
+          <div className="flex gap-3">
+            <input
+              type="number"
+              placeholder="Amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="p-2 rounded text-black flex-1"
+            />
+            <button
+              onClick={giveMoney}
+              className="bg-green-600 px-3 rounded"
+            >
+              Give
+            </button>
           </div>
-        ))}
-      </div>
+
+          {/* Jail Controls */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => jailUser(10)}
+              className="bg-red-600 px-3 py-1 rounded"
+            >
+              Jail 10m
+            </button>
+            <button
+              onClick={releaseUser}
+              className="bg-yellow-600 px-3 py-1 rounded"
+            >
+              Release
+            </button>
+          </div>
+
+          {/* Role Controls */}
+          <div className="flex gap-3 items-center">
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="p-2 rounded text-black"
+            >
+              <option value="player">Player</option>
+              <option value="mod">Moderator</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button
+              onClick={updateRole}
+              className="bg-blue-600 px-3 rounded"
+            >
+              Update Role
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CRIMES TAB */}
+      {tab === "crimes" && (
+        <div className="bg-gray-800 p-4 rounded shadow space-y-2">
+          <h2 className="text-lg font-semibold mb-2">Crimes Overview</h2>
+          {crimes.map((crime) => (
+            <div
+              key={crime.id}
+              className="border-b border-gray-700 py-2 text-sm"
+            >
+              <strong>{crime.name}</strong> — {crime.description} <br />
+              💵 {crime.min_reward}-{crime.max_reward} | 🎯{" "}
+              {Math.round(crime.success_rate * 100)}% | ⏳{" "}
+              {crime.cooldown_seconds}s | 🏆 +{crime.xp_reward} XP
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ECONOMY TAB */}
+      {tab === "economy" && (
+        <div className="bg-gray-800 p-4 rounded shadow">
+          <h2 className="text-lg font-semibold mb-2">Economy Controls</h2>
+          <p className="opacity-80">
+            Future expansion: control global taxes, bullet factory production,
+            casino odds, etc.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
