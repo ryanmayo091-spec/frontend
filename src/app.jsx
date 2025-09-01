@@ -187,17 +187,37 @@ export default function App() {
       {/* Main content */}
       <main className="flex-1 p-8">
         {activeTab === "home" && (
-          <SectionCard
-            title="Dashboard"
-            description="Your underworld empire at a glance."
-          >
+          <div>
+            <h1 className="text-3xl font-bold mb-6">📊 Your Empire</h1>
+            <p className="mb-6 opacity-80">
+              Track your progress as you rise through the underworld. Every
+              crime, deal, and property brings you closer to becoming the
+              ultimate Mafia boss.
+            </p>
+
             <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
-              <StatCard title="Money" value={`$${user.money ?? 0}`} />
-              <StatCard title="Bank" value={`$${user.bank_balance ?? 0}`} />
-              <StatCard title="Crimes" value={user.total_crimes ?? 0} />
-              <StatCard title="Rank" value={user.rank ?? "Rookie"} />
+              <DashboardCard
+                title="Money"
+                value={`$${user.money ?? 0}`}
+                image="https://i.ibb.co/1rC0bRL/money.jpg"
+              />
+              <DashboardCard
+                title="Bank Balance"
+                value={`$${user.bank_balance ?? 0}`}
+                image="https://i.ibb.co/xLrmF7h/bank.jpg"
+              />
+              <DashboardCard
+                title="Total Crimes"
+                value={user.total_crimes ?? 0}
+                image="https://i.ibb.co/JHxB8fC/crime.jpg"
+              />
+              <DashboardCard
+                title="Rank"
+                value={user.rank ?? "Rookie"}
+                image="https://i.ibb.co/sswJKrV/rank.jpg"
+              />
             </div>
-          </SectionCard>
+          </div>
         )}
         {activeTab === "crimes" && <Crimes user={user} API_URL={API_URL} />}
         {activeTab === "bank" && <Bank user={user} API_URL={API_URL} />}
@@ -223,5 +243,24 @@ function TabButton({ icon, label, active, onClick }) {
     >
       {icon} {label}
     </button>
+  );
+}
+
+function DashboardCard({ title, value, image }) {
+  return (
+    <div
+      className="relative bg-gray-900 rounded-xl overflow-hidden shadow-lg transform hover:scale-105 transition-transform"
+      style={{ height: "180px" }}
+    >
+      <img
+        src={image}
+        alt={title}
+        className="absolute inset-0 w-full h-full object-cover opacity-30"
+      />
+      <div className="relative z-10 p-4 flex flex-col justify-between h-full">
+        <div className="text-sm font-semibold uppercase opacity-80">{title}</div>
+        <div className="text-2xl font-bold text-green-400">{value}</div>
+      </div>
+    </div>
   );
 }
