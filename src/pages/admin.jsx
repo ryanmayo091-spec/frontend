@@ -1,280 +1,125 @@
 import { useEffect, useState } from "react";
 
-export default function Admin({ user, API_URL }) {
-  const [tab, setTab] = useState("players");
-  const [players, setPlayers] = useState([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [properties, setProperties] = useState([]);
+export default function Admin({ API_URL }) {
+  const [users, setUsers] = useState([]);
   const [crimes, setCrimes] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
 
-  // Load data
   useEffect(() => {
     fetch(`${API_URL}/admin/get-users`)
       .then((res) => res.json())
-      .then((data) => setPlayers(data));
-
-    fetch(`${API_URL}/properties`)
-      .then((res) => res.json())
-      .then((data) => setProperties(data));
+      .then((data) => setUsers(data));
 
     fetch(`${API_URL}/crimes`)
       .then((res) => res.json())
       .then((data) => setCrimes(data));
   }, [API_URL]);
 
-  // === ACTIONS ===
-  async function updateUser() {
-    if (!selectedPlayer) return;
-    await fetch(`${API_URL}/admin/update-user`, {
+  async function saveUser() {
+    const res = await fetch(`${API_URL}/admin/update-user`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(selectedPlayer),
+      body: JSON.stringify(selectedUser),
     });
-    alert("✅ Player updated");
+    const data = await res.json();
+    alert(data.message);
   }
 
   async function jailUser(seconds) {
-    if (!selectedPlayer) return;
-    await fetch(`${API_URL}/admin/jail-user`, {
+    const res = await fetch(`${API_URL}/admin/jail-user`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: selectedPlayer.id, jailSeconds: seconds }),
+      body: JSON.stringify({ userId: selectedUser.id, seconds }),
     });
-    alert("✅ Jail status updated");
+    const data = await res.json();
+    alert(data.message);
   }
 
-  async function setPropertyOwner(propertyId, ownerId) {
-    await fetch(`${API_URL}/admin/set-property-owner`, {
+  async function updateCrime(c) {
+    const res = await fetch(`${API_URL}/admin/update-crime`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ propertyId, ownerId }),
+      body: JSON.stringify(c),
     });
-    alert("✅ Property updated");
-  }
-
-  async function updateCrime(crime) {
-    await fetch(`${API_URL}/admin/update-crime`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(crime),
-    });
-    alert("✅ Crime updated");
+    const data = await res.json();
+    alert(data.message);
   }
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">🛡️ Admin Panel</h1>
-      <div className="flex gap-3 mb-6">
-        <button
-          className={`px-4 py-2 rounded ${
-            tab === "players" ? "bg-green-600" : "bg-gray-700"
-          }`}
-          onClick={() => setTab("players")}
-        >
-          Players
-        </button>
-        <button
-          className={`px-4 py-2 rounded ${
-            tab === "properties" ? "bg-green-600" : "bg-gray-700"
-          }`}
-          onClick={() => setTab("properties")}
-        >
-          Properties
-        </button>
-        <button
-          className={`px-4 py-2 rounded ${
-            tab === "economy" ? "bg-green-600" : "bg-gray-700"
-          }`}
-          onClick={() => setTab("economy")}
-        >
-          Economy
-        </button>
-      </div>
+      <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
 
-      {/* === PLAYERS TAB === */}
-      {tab === "players" && (
-        <div>
-          <h2 className="text-xl font-bold mb-4">Manage Players</h2>
-          <select
-            className="w-full p-2 text-black rounded mb-4"
-            onChange={(e) => {
-              const player = players.find(
-                (p) => p.id === parseInt(e.target.value)
-              );
-              setSelectedPlayer(player);
-            }}
+      <h2 className="text-xl font-semibold mb-2">Users</h2>
+      <select
+        onChange={(e) => {
+          const user = users.find((u) => u.id === parseInt(e.target.value));
+          setSelectedUser(user);
+        }}
+        className="text-black p-2 mb-4"
+      >
+        <option value="">Select User</option>
+        {users.map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.username}
+          </option>
+        ))}
+      </select>
+
+      {selectedUser && (
+        <div className="bg-gray-800 p-4 rounded mb-6">
+          <input
+            className="text-black p-1 mb-2 w-full"
+            placeholder="Money"
+            value={selectedUser.money}
+            onChange={(e) =>
+              setSelectedUser({ ...selectedUser, money: e.target.value })
+            }
+          />
+          <input
+            className="text-black p-1 mb-2 w-full"
+            placeholder="Bank"
+            value={selectedUser.bank_balance}
+            onChange={(e) =>
+              setSelectedUser({ ...selectedUser, bank_balance: e.target.value })
+            }
+          />
+          <button
+            onClick={saveUser}
+            className="bg-green-600 px-3 py-1 rounded mr-2"
           >
-            <option value="">Select Player</option>
-            {players.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.username}
-              </option>
-            ))}
-          </select>
-
-          {selectedPlayer && (
-            <div className="space-y-3 bg-gray-800 p-4 rounded">
-              <input
-                className="w-full p-2 text-black rounded"
-                value={selectedPlayer.money}
-                onChange={(e) =>
-                  setSelectedPlayer({ ...selectedPlayer, money: e.target.value })
-                }
-                placeholder="Money"
-              />
-              <input
-                className="w-full p-2 text-black rounded"
-                value={selectedPlayer.bank_balance}
-                onChange={(e) =>
-                  setSelectedPlayer({
-                    ...selectedPlayer,
-                    bank_balance: e.target.value,
-                  })
-                }
-                placeholder="Bank Balance"
-              />
-              <input
-                className="w-full p-2 text-black rounded"
-                value={selectedPlayer.xp}
-                onChange={(e) =>
-                  setSelectedPlayer({ ...selectedPlayer, xp: e.target.value })
-                }
-                placeholder="XP"
-              />
-              <input
-                className="w-full p-2 text-black rounded"
-                value={selectedPlayer.rank}
-                onChange={(e) =>
-                  setSelectedPlayer({ ...selectedPlayer, rank: e.target.value })
-                }
-                placeholder="Rank"
-              />
-              <select
-                className="w-full p-2 text-black rounded"
-                value={selectedPlayer.role}
-                onChange={(e) =>
-                  setSelectedPlayer({ ...selectedPlayer, role: e.target.value })
-                }
-              >
-                <option value="player">Player</option>
-                <option value="mod">Mod</option>
-                <option value="admin">Admin</option>
-              </select>
-
-              <div className="flex gap-3">
-                <button
-                  className="bg-green-600 px-4 py-2 rounded"
-                  onClick={updateUser}
-                >
-                  Save
-                </button>
-                <button
-                  className="bg-red-600 px-4 py-2 rounded"
-                  onClick={() => jailUser(300)}
-                >
-                  Jail 5min
-                </button>
-                <button
-                  className="bg-blue-600 px-4 py-2 rounded"
-                  onClick={() => jailUser(0)}
-                >
-                  Unjail
-                </button>
-              </div>
-            </div>
-          )}
+            Save User
+          </button>
+          <button
+            onClick={() => jailUser(60)}
+            className="bg-red-600 px-3 py-1 rounded"
+          >
+            Jail 1m
+          </button>
         </div>
       )}
 
-      {/* === PROPERTIES TAB === */}
-      {tab === "properties" && (
-        <div>
-          <h2 className="text-xl font-bold mb-4">Manage Properties</h2>
-          <div className="space-y-4">
-            {properties.map((prop) => (
-              <div key={prop.id} className="bg-gray-800 p-4 rounded">
-                <h3 className="font-bold">{prop.name}</h3>
-                <p className="opacity-80">{prop.description}</p>
-                <select
-                  className="w-full p-2 text-black rounded mt-2"
-                  onChange={(e) =>
-                    setPropertyOwner(prop.id, parseInt(e.target.value))
-                  }
-                >
-                  <option value="">Set Owner</option>
-                  {players.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.username}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
+      <h2 className="text-xl font-semibold mb-2">Crimes</h2>
+      {crimes.map((c) => (
+        <div key={c.id} className="bg-gray-800 p-4 rounded mb-4">
+          <h3 className="font-semibold">{c.name}</h3>
+          <input
+            className="text-black p-1 mb-1 w-full"
+            placeholder="Min Reward"
+            defaultValue={c.min_reward}
+            onBlur={(e) =>
+              updateCrime({ ...c, min_reward: e.target.value })
+            }
+          />
+          <input
+            className="text-black p-1 mb-1 w-full"
+            placeholder="Max Reward"
+            defaultValue={c.max_reward}
+            onBlur={(e) =>
+              updateCrime({ ...c, max_reward: e.target.value })
+            }
+          />
         </div>
-      )}
-
-      {/* === ECONOMY TAB === */}
-      {tab === "economy" && (
-        <div>
-          <h2 className="text-xl font-bold mb-4">Manage Economy</h2>
-          <div className="space-y-4">
-            {crimes.map((crime) => (
-              <div key={crime.id} className="bg-gray-800 p-4 rounded space-y-2">
-                <h3 className="font-bold">{crime.name}</h3>
-                <input
-                  className="w-full p-2 text-black rounded"
-                  value={crime.min_reward}
-                  onChange={(e) =>
-                    setCrimes(
-                      crimes.map((c) =>
-                        c.id === crime.id
-                          ? { ...c, min_reward: e.target.value }
-                          : c
-                      )
-                    )
-                  }
-                  placeholder="Min Reward"
-                />
-                <input
-                  className="w-full p-2 text-black rounded"
-                  value={crime.max_reward}
-                  onChange={(e) =>
-                    setCrimes(
-                      crimes.map((c) =>
-                        c.id === crime.id
-                          ? { ...c, max_reward: e.target.value }
-                          : c
-                      )
-                    )
-                  }
-                  placeholder="Max Reward"
-                />
-                <input
-                  className="w-full p-2 text-black rounded"
-                  value={crime.success_rate}
-                  onChange={(e) =>
-                    setCrimes(
-                      crimes.map((c) =>
-                        c.id === crime.id
-                          ? { ...c, success_rate: e.target.value }
-                          : c
-                      )
-                    )
-                  }
-                  placeholder="Success Rate"
-                />
-                <button
-                  className="bg-green-600 px-4 py-2 rounded"
-                  onClick={() => updateCrime(crime)}
-                >
-                  Save Crime
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      ))}
     </div>
   );
 }
